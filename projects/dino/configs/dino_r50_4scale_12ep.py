@@ -51,4 +51,4 @@ dataloader.train.num_workers = 16
 dataloader.train.total_batch_size = 10
 
 # dump the testing results into output_dir for visualization
-dataloader.evaluator.output_dir = train.output_dir
+#dataloader.evaluator.output_dir = train.output_dir

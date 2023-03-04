@@ -5,7 +5,8 @@ detrex/config/configs
 detrex/version.py
 # experiment dirs
 outputs/
-
+*.pth
+*.jpg
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
