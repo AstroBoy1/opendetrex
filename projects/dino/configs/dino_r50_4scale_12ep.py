@@ -2,7 +2,8 @@ from detrex.config import get_config
 from .models.dino_r50 import model
 
 # get default config
-dataloader = get_config("common/data/coco_detr.py").dataloader
+dataloader = get_config("common/data/ood.py").dataloader
+#dataloader = get_config("common/data/coco_detr.py").dataloader
 optimizer = get_config("common/optim.py").AdamW
 lr_multiplier = get_config("common/coco_schedule.py").lr_multiplier_12ep
 train = get_config("common/train.py").train
@@ -13,6 +14,9 @@ train.output_dir = "./output/dino_r50_4scale_12ep"
 
 # max training iterations
 train.max_iter = 90000
+
+# fast debug train.max_iter=20, train.eval_period=10, train.log_period=1
+train.fast_dev_run.enabled=True
 
 # run evaluation every 5000 iters
 train.eval_period = 5000
@@ -44,7 +48,7 @@ dataloader.train.num_workers = 16
 # please notice that this is total batch size.
 # surpose you're using 4 gpus for training and the batch size for
 # each gpu is 16/4 = 4
-dataloader.train.total_batch_size = 16
+dataloader.train.total_batch_size = 10
 
 # dump the testing results into output_dir for visualization
 dataloader.evaluator.output_dir = train.output_dir
