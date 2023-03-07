@@ -146,6 +146,7 @@ class Trainer(SimpleTrainer):
             self.grad_scaler.load_state_dict(state_dict["grad_scaler"])
 
 
+# This function gets run during eval
 def do_test(cfg, model, eval_only=False):
     logger = logging.getLogger("detectron2")
 

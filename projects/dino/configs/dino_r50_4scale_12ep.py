@@ -16,7 +16,7 @@ train.output_dir = "./output/dino_r50_4scale_12ep"
 train.max_iter = 90000
 
 # fast debug train.max_iter=20, train.eval_period=10, train.log_period=1
-train.fast_dev_run.enabled=True
+train.fast_dev_run.enabled = True
 
 # run evaluation every 5000 iters
 train.eval_period = 5000
@@ -36,6 +36,9 @@ train.clip_grad.params.norm_type = 2
 train.device = "cuda"
 model.device = train.device
 
+# 80 default classes for owod
+model.num_classes = 80
+
 # modify optimizer config
 optimizer.lr = 1e-4
 optimizer.betas = (0.9, 0.999)
@@ -51,4 +54,4 @@ dataloader.train.num_workers = 16
 dataloader.train.total_batch_size = 10
 
 # dump the testing results into output_dir for visualization
-#dataloader.evaluator.output_dir = train.output_dir
+dataloader.evaluator.output_dir = train.output_dir
