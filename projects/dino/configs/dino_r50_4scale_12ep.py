@@ -16,7 +16,7 @@ train.output_dir = "./output/dino_r50_4scale_12ep"
 train.max_iter = 90000
 
 # fast debug train.max_iter=20, train.eval_period=10, train.log_period=1
-train.fast_dev_run.enabled = True
+train.fast_dev_run.enabled = False
 
 # run evaluation every 5000 iters
 train.eval_period = 5000
@@ -37,7 +37,7 @@ train.device = "cuda"
 model.device = train.device
 
 # 80 default classes for owod
-model.num_classes = 80
+model.num_classes = 20
 
 # modify optimizer config
 optimizer.lr = 1e-4
@@ -48,10 +48,11 @@ optimizer.params.lr_factor_func = lambda module_name: 0.1 if "backbone" in modul
 # modify dataloader config
 dataloader.train.num_workers = 16
 
+# Powers of 2
 # please notice that this is total batch size.
 # surpose you're using 4 gpus for training and the batch size for
 # each gpu is 16/4 = 4
-dataloader.train.total_batch_size = 10
+dataloader.train.total_batch_size = 8
 
 # dump the testing results into output_dir for visualization
 dataloader.evaluator.output_dir = train.output_dir

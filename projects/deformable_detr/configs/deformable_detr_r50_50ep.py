@@ -1,7 +1,8 @@
 from detrex.config import get_config
 from .models.deformable_detr_r50 import model
 
-dataloader = get_config("common/data/coco_detr.py").dataloader
+dataloader = get_config("common/data/ood.py").dataloader
+#dataloader = get_config("common/data/coco_detr.py").dataloader
 lr_multiplier = get_config("common/coco_schedule.py").lr_multiplier_50ep
 optimizer = get_config("common/optim.py").AdamW
 train = get_config("common/train.py").train
@@ -31,6 +32,9 @@ train.clip_grad.params.norm_type = 2
 train.device = "cuda"
 model.device = train.device
 
+# 20 to test out task 1 training/testing
+model.num_classes = 20
+
 # modify optimizer config
 optimizer.lr = 1e-4
 optimizer.betas = (0.9, 0.999)
@@ -43,7 +47,8 @@ dataloader.train.num_workers = 16
 # please notice that this is total batch size.
 # surpose you're using 4 gpus for training and the batch size for
 # each gpu is 16/4 = 4
-dataloader.train.total_batch_size = 16
+dataloader.train.total_batch_size = 4
+#dataloader.train.total_batch_size = 16
 
 # dump the testing results into output_dir for visualization
 dataloader.evaluator.output_dir = train.output_dir

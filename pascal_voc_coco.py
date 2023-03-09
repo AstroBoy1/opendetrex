@@ -79,7 +79,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     """
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:
         fileids = np.loadtxt(f, dtype=np.str)
-
+    # fileids is a string
     # Needs to read many small annotation files. Makes sense at local
     annotation_dirname = PathManager.get_local_path(os.path.join(dirname, "Annotations/"))
     dicts = []
@@ -100,6 +100,10 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
 
         for obj in tree.findall("object"):
             cls = obj.find("name").text
+            # In the towod dataset creation, voc labels were converted to coco
+            # In the class names tuple, the first 20 are the voc names
+            if cls in VOC_CLASS_NAMES_COCOFIED:
+                cls = BASE_VOC_CLASS_NAMES[VOC_CLASS_NAMES_COCOFIED.index(cls)]
             # We include "difficult" samples in training.
             # Based on limited experiments, they don't hurt accuracy.
             # difficult = int(obj.find("difficult").text)
@@ -118,6 +122,8 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             )
         r["annotations"] = instances
         dicts.append(r)
+        # returns filename which is the full filepath, image_id which is just a string,
+        # image height, width, and bounding box annotations with category id, 4 coordinate bbox, and mode
     return dicts
 
 

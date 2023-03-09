@@ -63,9 +63,10 @@ T4_CLASS_NAMES = [
 VOC_COCO_CLASS_NAMES = {}
 # Used for the original dataset benchmark
 VOC_COCO_CLASS_NAMES["TOWOD"] = tuple(itertools.chain(VOC_CLASS_NAMES, T2_CLASS_NAMES, T3_CLASS_NAMES, T4_CLASS_NAMES, UNK_CLASS))
-
+VOC_COCO_CLASS_NAMES["TOWOD"] = VOC_CLASS_NAMES
 
 dir = "../PROB/data/VOC2007"
+#dir = "../../datasets/VOCdevkit2007/VOC2007"
 register_pascal_voc("towod_t1", dir, "train", 2007, VOC_COCO_CLASS_NAMES["TOWOD"])
 
 dataloader.train = L(build_detection_train_loader)(
