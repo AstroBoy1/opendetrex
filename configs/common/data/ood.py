@@ -62,12 +62,13 @@ T4_CLASS_NAMES = [
 
 VOC_COCO_CLASS_NAMES = {}
 # Used for the original dataset benchmark
-VOC_COCO_CLASS_NAMES["TOWOD"] = tuple(itertools.chain(VOC_CLASS_NAMES, T2_CLASS_NAMES, T3_CLASS_NAMES, T4_CLASS_NAMES, UNK_CLASS))
+ALL_CLASSES = tuple(itertools.chain(VOC_CLASS_NAMES, T2_CLASS_NAMES, T3_CLASS_NAMES, T4_CLASS_NAMES, UNK_CLASS))
 VOC_COCO_CLASS_NAMES["TOWOD"] = VOC_CLASS_NAMES
 
 dir = "../PROB/data/VOC2007"
 #dir = "../../datasets/VOCdevkit2007/VOC2007"
 register_pascal_voc("towod_t1", dir, "train", 2007, VOC_COCO_CLASS_NAMES["TOWOD"])
+register_pascal_voc("towod_test", dir, "test", 2007, ALL_CLASSES)
 
 dataloader.train = L(build_detection_train_loader)(
     dataset=L(get_detection_dataset_dicts)(names="towod_t1"),
@@ -119,7 +120,7 @@ dataloader.train = L(build_detection_train_loader)(
 # )
 
 dataloader.test = L(build_detection_test_loader)(
-    dataset=L(get_detection_dataset_dicts)(names="towod_t1", filter_empty=False),
+    dataset=L(get_detection_dataset_dicts)(names="towod_test", filter_empty=False),
     mapper=L(DetrDatasetMapper)(
         augmentation=[
             L(T.ResizeShortestEdge)(

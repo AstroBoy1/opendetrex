@@ -58,6 +58,8 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
     def reset(self):
         self._predictions = defaultdict(list)  # class name -> list of prediction strings
 
+
+    # Called by detectron2/evaluation.evaluator.py
     def process(self, inputs, outputs):
         for input, output in zip(inputs, outputs):
             image_id = input["image_id"]
@@ -99,7 +101,10 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
             res_file_template = os.path.join(dirname, "{}.txt")
 
             aps = defaultdict(list)  # iou -> ap per class
-            for cls_id, cls_name in enumerate(self._class_names):
+            # For each class, calculate the ap
+            #for cls_id, cls_name in enumerate(self._class_names):
+            # first 20 for task 1
+            for cls_id, cls_name in enumerate(self._class_names[:20]):
                 lines = predictions.get(cls_id, [""])
 
                 with open(res_file_template.format(cls_name), "w") as f:
@@ -147,8 +152,9 @@ def parse_rec(filename):
     for obj in tree.findall("object"):
         obj_struct = {}
         obj_struct["name"] = obj.find("name").text
-        obj_struct["pose"] = obj.find("pose").text
-        obj_struct["truncated"] = int(obj.find("truncated").text)
+        # This causes problems, because coco doesn't have pose annotations possibly
+        #obj_struct["pose"] = obj.find("pose").text
+        #obj_struct["truncated"] = int(obj.find("truncated").text)
         obj_struct["difficult"] = int(obj.find("difficult").text)
         bbox = obj.find("bndbox")
         obj_struct["bbox"] = [
@@ -226,9 +232,14 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
 
     # load annots
     recs = {}
+    # some annotations missing for the image
     for imagename in imagenames:
-        recs[imagename] = parse_rec(annopath.format(imagename))
-
+        try:
+            recs[imagename] = parse_rec(annopath.format(imagename))
+        except:
+            print("error with file", imagename)
+            print(annopath.format(imagename))
+            breakpoint()
     # extract gt objects for this class
     class_recs = {}
     npos = 0
@@ -241,7 +252,7 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
         npos = npos + sum(~difficult)
         class_recs[imagename] = {"bbox": bbox, "difficult": difficult, "det": det}
 
-    # read dets
+    # read detetections
     detfile = detpath.format(classname)
     with open(detfile, "r") as f:
         lines = f.readlines()
