@@ -17,6 +17,8 @@ from detrex.data import DetrDatasetMapper
 from pascal_voc_coco import register_pascal_voc
 import itertools
 
+from torchvision.transforms import ColorJitter
+
 dataloader = OmegaConf.create()
 
 
@@ -70,6 +72,7 @@ dir = "../PROB/data/VOC2007"
 register_pascal_voc("towod_t1", dir, "train", 2007, VOC_COCO_CLASS_NAMES["TOWOD"])
 register_pascal_voc("towod_test", dir, "test", 2007, ALL_CLASSES)
 
+
 dataloader.train = L(build_detection_train_loader)(
     dataset=L(get_detection_dataset_dicts)(names="towod_t1"),
     mapper=L(DetrDatasetMapper)(
@@ -79,6 +82,17 @@ dataloader.train = L(build_detection_train_loader)(
                 short_edge_length=(480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800),
                 max_size=1333,
                 sample_style="choice",
+            ), L(T.RandomContrast)(
+                intensity_min=0, 
+                intensity_max=2), 
+            L(T.RandomBrightness)(
+                intensity_min=0, 
+                intensity_max=2), 
+            L(T.RandomSaturation)(
+                intensity_min=0, 
+                intensity_max=2), 
+            L(T.RandomLighting)(
+                scale=0.1
             ),
         ],
         augmentation_with_crop=[

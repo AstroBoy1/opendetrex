@@ -12,11 +12,15 @@ train = get_config("common/train.py").train
 train.init_checkpoint = "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
 train.output_dir = "./output/dino_r50_4scale_12ep"
 
-# max training iterations
+# max training iterations, batch size of 4, 16,551 examples
+# 16551 / 4 = 4137.75 iterations per epoch
+# 90000 / 4137.75 = 21 epochs
 train.max_iter = 90000
 
 # fast debug train.max_iter=20, train.eval_period=10, train.log_period=1
 train.fast_dev_run.enabled = False
+# Mixed precision training saves so much memory!
+train.amp = dict(enabled=True)
 
 # run evaluation every 5000 iters
 train.eval_period = 5000
@@ -36,8 +40,16 @@ train.clip_grad.params.norm_type = 2
 train.device = "cuda"
 model.device = train.device
 
-# 80 default classes for owod
-model.num_classes = 20
+# known and unknown class
+model.num_classes = 2
+
+# dropout parameters
+model.transformer.encoder.attn_dropout=0.1
+model.transformer.encoder.ffn_dropout=0.1
+model.transformer.decoder.attn_dropout=0.1
+model.transformer.decoder.ffn_dropout=0.1
+model.criterion.matcher.cost_class=1.0
+
 
 # modify optimizer config
 optimizer.lr = 1e-4
@@ -54,5 +66,5 @@ dataloader.train.num_workers = 16
 # each gpu is 16/4 = 4
 dataloader.train.total_batch_size = 8
 
-# dump the testing results into output_dir for visualization
+# dump the testing results into output_dir for visualization in tensorboard
 dataloader.evaluator.output_dir = train.output_dir

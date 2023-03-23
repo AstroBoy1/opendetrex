@@ -117,8 +117,15 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             # In coordinate space this is represented by (xmin=0, xmax=W)
             bbox[0] -= 1.0
             bbox[1] -= 1.0
+            cid = class_names.index(cls)
+            # 1 for unknown
+            if cid >= 20:
+                cid = 1
+            # 0 for known
+            else:
+                cid = 0
             instances.append(
-                {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
+                {"category_id": cid, "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
             )
         r["annotations"] = instances
         dicts.append(r)

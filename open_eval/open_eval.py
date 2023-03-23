@@ -89,7 +89,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
             for clsid, lines in predictions_per_rank.items():
                 predictions[clsid].extend(lines)
         del all_predictions
-
+        #breakpoint()
         self._logger.info(
             "Evaluating {} using {} metric. "
             "Note that results do not use the official Matlab API.".format(
@@ -103,15 +103,22 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
             aps = defaultdict(list)  # iou -> ap per class
             # For each class, calculate the ap
             #for cls_id, cls_name in enumerate(self._class_names):
+                # if cls_id != 80:
+                #     continue
             # first 20 for task 1
-            for cls_id, cls_name in enumerate(self._class_names[:20]):
+            recs = {}
+            recs[50] = []
+            for cls_id, cls_name in enumerate(self._class_names[1:2]):
+                cls_id = 0
+                cls_name = "aeroplane"
+                #print(cls_id, cls_name)
                 lines = predictions.get(cls_id, [""])
-
+                #breakpoint()
                 with open(res_file_template.format(cls_name), "w") as f:
                     f.write("\n".join(lines))
 
-                #for thresh in range(50, 55, 5):
-                for thresh in range(50, 100, 5):
+                for thresh in range(50, 80, 25):
+                #for thresh in range(50, 80, 25):
                     # thresholds 50, 55, ...95
                     #print("evaluating at threshold", thresh)
                     rec, prec, ap = voc_eval(
@@ -123,10 +130,16 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         use_07_metric=self._is_2007,
                     )
                     aps[thresh].append(ap * 100)
-
+                    print("recall", rec[-1])
+                    if thresh == 50 and cls_id == 0:
+                        recs[50] = rec[-1]
+                #breakpoint()
         ret = OrderedDict()
         mAP = {iou: np.mean(x) for iou, x in aps.items()}
-        ret["bbox"] = {"AP": np.mean(list(mAP.values())), "AP50": mAP[50], "AP75": mAP[75]}
+        # returns dictionary of keys(metrics) and values
+        ret["bbox"] = {"AP": np.mean(list(mAP.values())), "AP50": mAP[50], "AP75": mAP[75],
+        "unknown_recall50":recs[50]}
+        # the return values get put into metrics.json
         return ret
 
 
@@ -223,7 +236,30 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     # assumes detections are in detpath.format(classname)
     # assumes annotations are in annopath.format(imagename)
     # assumes imagesetfile is a text file with each line an image name
+    T2_CLASS_NAMES = {
+        "truck", "traffic light", "fire hydrant", "stop sign", "parking meter",
+        "bench", "elephant", "bear", "zebra", "giraffe",
+        "backpack", "umbrella", "handbag", "tie", "suitcase",
+        "microwave", "oven", "toaster", "sink", "refrigerator"
+    }
 
+    T3_CLASS_NAMES = {
+        "frisbee", "skis", "snowboard", "sports ball", "kite",
+        "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket",
+        "banana", "apple", "sandwich", "orange", "broccoli",
+        "carrot", "hot dog", "pizza", "donut", "cake"
+    }
+
+    T4_CLASS_NAMES = {
+        "bed", "toilet", "laptop", "mouse",
+        "remote", "keyboard", "cell phone", "book", "clock",
+        "vase", "scissors", "teddy bear", "hair drier", "toothbrush",
+        "wine glass", "cup", "fork", "knife", "spoon", "bowl"
+    }
+
+    T4_CLASS_NAMES.update(T3_CLASS_NAMES)
+    T4_CLASS_NAMES.update(T2_CLASS_NAMES)
+    #breakpoint()
     # first load gt
     # read list of images
     with PathManager.open(imagesetfile, "r") as f:
@@ -242,16 +278,20 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
             breakpoint()
     # extract gt objects for this class
     class_recs = {}
+    # number of positive instances for the class
     npos = 0
     for imagename in imagenames:
         R = [obj for obj in recs[imagename] if obj["name"] == classname]
+        if classname == "aeroplane":
+            R = [obj for obj in recs[imagename] if obj["name"] in T4_CLASS_NAMES]
         bbox = np.array([x["bbox"] for x in R])
         difficult = np.array([x["difficult"] for x in R]).astype(np.bool)
         # difficult = np.array([False for x in R]).astype(np.bool)  # treat all "difficult" as GT
         det = [False] * len(R)
         npos = npos + sum(~difficult)
         class_recs[imagename] = {"bbox": bbox, "difficult": difficult, "det": det}
-
+    # if classname == "unknown" and ovthresh == 0.5:
+    #     breakpoint()
     # read detetections
     detfile = detpath.format(classname)
     with open(detfile, "r") as f:
@@ -269,10 +309,9 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     sorted_conf = [confidence[x] for x in sorted_ind]
     # go down dets and mark TPs and FPs
     nd = len(image_ids)
+    # For each bounding box
     tp = np.zeros(nd)
     fp = np.zeros(nd)
-    #print("classname:", classname)
-    #breakpoint()
     for d in range(nd):
         R = class_recs[image_ids[d]]
         bb = BB[d, :].astype(float)
@@ -304,10 +343,12 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
             overlaps = inters / uni
             ovmax = np.max(overlaps)
             jmax = np.argmax(overlaps)
+        #print("ovmax", ovmax)
         if ovmax > ovthresh:
             if not R["difficult"][jmax]:
                 if not R["det"][jmax]:
                     tp[d] = 1.0
+                    #print("detected unknown")
                     R["det"][jmax] = 1
                 else:
                     fp[d] = 1.0
@@ -318,13 +359,9 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     fp = np.cumsum(fp)
     tp = np.cumsum(tp)
     rec = tp / float(npos)
-    #print(classname)
-    #print("fp", fp)
-    #print("tp", tp)
     # avoid divide by zero in case the first detection matches a difficult
     # ground truth
     prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
     ap = voc_ap(rec, prec, use_07_metric)
-    #print("recall", "precision", "ap", rec, prec, ap)
-    #breakpoint()
+    # We just take the last index of the rec matrix
     return rec, prec, ap

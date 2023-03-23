@@ -526,9 +526,17 @@ class DINO(nn.Module):
         topk_values, topk_indexes = torch.topk(
             prob.view(box_cls.shape[0], -1), self.select_box_nums_for_evaluation, dim=1
         )
+        # highest probability score for each query detection, 300
         scores = topk_values
         topk_boxes = torch.div(topk_indexes, box_cls.shape[2], rounding_mode="floor")
         labels = topk_indexes % box_cls.shape[2]
+
+        # If the scores aren't high enough, we convert the label to unknown
+        # unknown_label = 80
+        # unknown_threshold = 0.5
+        # for i in range(300):
+        #     if scores[0][i] < unknown_threshold:
+        #         labels[0][i] = unknown_label
 
         boxes = torch.gather(box_pred, 1, topk_boxes.unsqueeze(-1).repeat(1, 1, 4))
 
@@ -545,6 +553,7 @@ class DINO(nn.Module):
             result.scores = scores_per_image
             result.pred_classes = labels_per_image
             results.append(result)
+            #breakpoint()
         return results
 
     def prepare_targets(self, targets):
