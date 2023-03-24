@@ -16,6 +16,8 @@ from detectron2.utils.file_io import PathManager
 
 from detectron2.evaluation.evaluator import DatasetEvaluator
 
+import pandas as pd
+
 
 class PascalVOCDetectionEvaluator(DatasetEvaluator):
     """
@@ -104,17 +106,22 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
             # For each class, calculate the ap
             #for cls_id, cls_name in enumerate(self._class_names):
             # first 20 for task 1
+            df = pd.DataFrame()
+            class_list = []
+            tp_list = []
+            scores_list = []
             for cls_id, cls_name in enumerate(self._class_names[:20]):
+                print(cls_name)
                 lines = predictions.get(cls_id, [""])
 
                 with open(res_file_template.format(cls_name), "w") as f:
                     f.write("\n".join(lines))
 
-                #for thresh in range(50, 55, 5):
-                for thresh in range(50, 100, 5):
+                for thresh in range(50, 55, 5):
+                #for thresh in range(50, 100, 5):
                     # thresholds 50, 55, ...95
                     #print("evaluating at threshold", thresh)
-                    rec, prec, ap = voc_eval(
+                    rec, prec, ap, tp_scores, fp_scores = voc_eval(
                         res_file_template,
                         self._anno_file_template,
                         self._image_set_path,
@@ -123,10 +130,24 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         use_07_metric=self._is_2007,
                     )
                     aps[thresh].append(ap * 100)
-
+                    for t in tp_scores:
+                        class_list.append(cls_id)
+                        tp_list.append(1)
+                        scores_list.append(t)
+                    # for f in fp_scores:
+                    #     class_list.append(cls_id)
+                    #     tp_list.append(0)
+                    #     scores_list.append(f)
+                    
+        df["class_id"] = class_list
+        df["tp"] = tp_list
+        df["class_score"] = scores_list
+        df.to_csv("tp_class_scores.csv")
+        print("saved dataframes")
         ret = OrderedDict()
         mAP = {iou: np.mean(x) for iou, x in aps.items()}
-        ret["bbox"] = {"AP": np.mean(list(mAP.values())), "AP50": mAP[50], "AP75": mAP[75]}
+        ret["bbox"] = {"AP": np.mean(list(mAP.values())), "AP50": mAP[50]}
+        #ret["bbox"] = {"AP": np.mean(list(mAP.values())), "AP50": mAP[50], "AP75": mAP[75]}
         return ret
 
 
@@ -273,6 +294,8 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     fp = np.zeros(nd)
     #print("classname:", classname)
     #breakpoint()
+    tp_scores = []
+    fp_scores = []
     for d in range(nd):
         R = class_recs[image_ids[d]]
         bb = BB[d, :].astype(float)
@@ -308,12 +331,14 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
             if not R["difficult"][jmax]:
                 if not R["det"][jmax]:
                     tp[d] = 1.0
+                    tp_scores.append(sorted_conf[d])
                     R["det"][jmax] = 1
                 else:
                     fp[d] = 1.0
+                    fp_scores.append(sorted_conf[d])
         else:
             fp[d] = 1.0
-
+            fp_scores.append(sorted_conf[d])
     # compute precision recall
     fp = np.cumsum(fp)
     tp = np.cumsum(tp)
@@ -327,4 +352,4 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     ap = voc_ap(rec, prec, use_07_metric)
     #print("recall", "precision", "ap", rec, prec, ap)
     #breakpoint()
-    return rec, prec, ap
+    return rec, prec, ap, tp_scores, fp_scores

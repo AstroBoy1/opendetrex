@@ -29,6 +29,8 @@ from detectron2.structures import Boxes, ImageList, Instances
 from detectron2.utils.events import get_event_storage
 from detectron2.data.detection_utils import convert_image_to_rgb
 
+import pandas as pd
+
 
 class DINO(nn.Module):
     """Implement DAB-Deformable-DETR in `DAB-DETR: Dynamic Anchor Boxes are Better Queries for DETR
@@ -504,6 +506,7 @@ class DINO(nn.Module):
         images = ImageList.from_tensors(images)
         return images
 
+    # called during inference/testing
     def inference(self, box_cls, box_pred, image_sizes):
         """
         Arguments:
@@ -532,9 +535,14 @@ class DINO(nn.Module):
 
         boxes = torch.gather(box_pred, 1, topk_boxes.unsqueeze(-1).repeat(1, 1, 4))
 
+        df = pd.read_csv("dino_t1_class_thresholds.csv")
+        class_score_hash = df.to_dict()
+
         # For each box we assign the best class or the second best if the best on is `no_object`.
         # scores, labels = F.softmax(box_cls, dim=-1)[:, :, :-1].max(-1)
-
+        #breakpoint()
+        # scores is torch.Size([batch=1, 300])
+        unknown_label = 80
         for i, (scores_per_image, labels_per_image, box_pred_per_image, image_size) in enumerate(
             zip(scores, labels, boxes, image_sizes)
         ):
@@ -542,6 +550,13 @@ class DINO(nn.Module):
             result.pred_boxes = Boxes(box_cxcywh_to_xyxy(box_pred_per_image))
 
             result.pred_boxes.scale(scale_x=image_size[1], scale_y=image_size[0])
+            # If the score is less than the threshold, set it to unknown
+            # Using for loop, could probably use a builtin function instead
+            for index, key in enumerate(labels_per_image):
+                threshold = class_score_hash["class_score"][int(key)]
+                if scores_per_image[index] < threshold:
+                    labels_per_image[index] = unknown_label
+                    #print("converting to unknown")
             result.scores = scores_per_image
             result.pred_classes = labels_per_image
             results.append(result)
