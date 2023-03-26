@@ -552,10 +552,10 @@ class DINO(nn.Module):
             result.pred_boxes.scale(scale_x=image_size[1], scale_y=image_size[0])
             # If the score is less than the threshold, set it to unknown
             # Using for loop, could probably use a builtin function instead
-            for index, key in enumerate(labels_per_image):
-                threshold = class_score_hash["class_score"][int(key)]
-                if scores_per_image[index] < threshold:
-                    labels_per_image[index] = unknown_label
+            # for index, key in enumerate(labels_per_image):
+            #     threshold = class_score_hash["class_score"][int(key)]
+            #     if scores_per_image[index] < threshold:
+            #         labels_per_image[index] = unknown_label
                     #print("converting to unknown")
             result.scores = scores_per_image
             result.pred_classes = labels_per_image

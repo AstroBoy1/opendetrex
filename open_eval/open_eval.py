@@ -111,16 +111,19 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
             tp_list = []
             scores_list = []
             for cls_id, cls_name in enumerate(self._class_names[:20]):
+                #cls_id = 80
+                #cls_name = "unknown"
+                remove_knowns(predictions)
                 print(cls_name)
                 lines = predictions.get(cls_id, [""])
-
+                #breakpoint()
+                # No need to write lines to a file, because it's just read back later
                 with open(res_file_template.format(cls_name), "w") as f:
                     f.write("\n".join(lines))
 
                 for thresh in range(50, 55, 5):
                 #for thresh in range(50, 100, 5):
                     # thresholds 50, 55, ...95
-                    #print("evaluating at threshold", thresh)
                     rec, prec, ap, tp_scores, fp_scores = voc_eval(
                         res_file_template,
                         self._anno_file_template,
@@ -134,11 +137,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         class_list.append(cls_id)
                         tp_list.append(1)
                         scores_list.append(t)
-                    # for f in fp_scores:
-                    #     class_list.append(cls_id)
-                    #     tp_list.append(0)
-                    #     scores_list.append(f)
-                    
+                break
         df["class_id"] = class_list
         df["tp"] = tp_list
         df["class_score"] = scores_list
@@ -221,6 +220,31 @@ def voc_ap(rec, prec, use_07_metric=False):
     return ap
 
 
+def remove_knowns(predictions, last_class=20):
+    """Goes through each detection file, and hashes the image id (key) and bounding boxes (values)
+    confidence score needs to be higher than class threshold
+    IoU between unknown and known prediction needs to be higher than IoU threshold
+    Returns a new unknown detection file for voc_eval(classname="unknown")"""
+    confidence_threshold = 0.5
+    total_old_lines = 0
+    # For each class
+    all_lines = []
+    for cls_id in range(last_class):
+        lines = predictions.get(cls_id, [""])
+        total_old_lines += len(lines)
+        splitlines = [x.strip().split(" ") for x in lines]
+        #image_ids = [x[0] for x in splitlines]
+        confidence = np.array([float(x[1]) for x in splitlines])
+        #BB = np.array([[float(z) for z in x[2:]] for x in splitlines]).reshape(-1, 4)
+        for index, elem in enumerate(lines):
+            if confidence[index] > confidence_threshold:
+                all_lines.append(elem)
+    # Save high scoring known predictions to file
+    # Need to run once with known object detector and once with general object detector
+    breakpoint()
+    return 1
+
+
 def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_metric=False):
     """rec, prec, ap = voc_eval(detpath,
                                 annopath,
@@ -264,8 +288,33 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     # extract gt objects for this class
     class_recs = {}
     npos = 0
+    T2_CLASS_NAMES = [
+    "truck", "traffic light", "fire hydrant", "stop sign", "parking meter",
+    "bench", "elephant", "bear", "zebra", "giraffe",
+    "backpack", "umbrella", "handbag", "tie", "suitcase",
+    "microwave", "oven", "toaster", "sink", "refrigerator"
+    ]
+
+    T3_CLASS_NAMES = [
+        "frisbee", "skis", "snowboard", "sports ball", "kite",
+        "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket",
+        "banana", "apple", "sandwich", "orange", "broccoli",
+        "carrot", "hot dog", "pizza", "donut", "cake"
+    ]
+
+    T4_CLASS_NAMES = [
+        "bed", "toilet", "laptop", "mouse",
+        "remote", "keyboard", "cell phone", "book", "clock",
+        "vase", "scissors", "teddy bear", "hair drier", "toothbrush",
+        "wine glass", "cup", "fork", "knife", "spoon", "bowl"
+    ]
+    unknown_hash = set(T2_CLASS_NAMES)
+    unknown_hash.update(T3_CLASS_NAMES)
+    unknown_hash.update(T4_CLASS_NAMES)
     for imagename in imagenames:
         R = [obj for obj in recs[imagename] if obj["name"] == classname]
+        if classname == "unknown":
+            R = [obj for obj in recs[imagename] if obj["name"] in unknown_hash]
         bbox = np.array([x["bbox"] for x in R])
         difficult = np.array([x["difficult"] for x in R]).astype(np.bool)
         # difficult = np.array([False for x in R]).astype(np.bool)  # treat all "difficult" as GT
@@ -292,8 +341,6 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     nd = len(image_ids)
     tp = np.zeros(nd)
     fp = np.zeros(nd)
-    #print("classname:", classname)
-    #breakpoint()
     tp_scores = []
     fp_scores = []
     for d in range(nd):
