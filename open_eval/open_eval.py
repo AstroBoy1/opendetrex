@@ -17,6 +17,8 @@ from detectron2.utils.file_io import PathManager
 from detectron2.evaluation.evaluator import DatasetEvaluator
 
 import pandas as pd
+import pickle
+from collections import defaultdict
 
 
 class PascalVOCDetectionEvaluator(DatasetEvaluator):
@@ -110,10 +112,11 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
             class_list = []
             tp_list = []
             scores_list = []
+            best_boxes(predictions)
+            return
             for cls_id, cls_name in enumerate(self._class_names[:20]):
                 #cls_id = 80
                 #cls_name = "unknown"
-                remove_knowns(predictions)
                 print(cls_name)
                 lines = predictions.get(cls_id, [""])
                 #breakpoint()
@@ -141,7 +144,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         df["class_id"] = class_list
         df["tp"] = tp_list
         df["class_score"] = scores_list
-        df.to_csv("tp_class_scores.csv")
+        #df.to_csv("tp_class_scores.csv")
         print("saved dataframes")
         ret = OrderedDict()
         mAP = {iou: np.mean(x) for iou, x in aps.items()}
@@ -220,7 +223,7 @@ def voc_ap(rec, prec, use_07_metric=False):
     return ap
 
 
-def remove_knowns(predictions, last_class=20):
+def best_boxes(predictions, last_class=20):
     """Goes through each detection file, and hashes the image id (key) and bounding boxes (values)
     confidence score needs to be higher than class threshold
     IoU between unknown and known prediction needs to be higher than IoU threshold
@@ -228,7 +231,8 @@ def remove_knowns(predictions, last_class=20):
     confidence_threshold = 0.5
     total_old_lines = 0
     # For each class
-    all_lines = []
+    #all_lines = []
+    detection_hash = defaultdict(list)
     for cls_id in range(last_class):
         lines = predictions.get(cls_id, [""])
         total_old_lines += len(lines)
@@ -238,10 +242,14 @@ def remove_knowns(predictions, last_class=20):
         #BB = np.array([[float(z) for z in x[2:]] for x in splitlines]).reshape(-1, 4)
         for index, elem in enumerate(lines):
             if confidence[index] > confidence_threshold:
-                all_lines.append(elem)
+                split = elem.split(" ")
+                detection_hash[split[0]].append(split[1:])
     # Save high scoring known predictions to file
+    with open("known_detections_hash.pkl", "wb") as fp:
+        #pickle.load(fp)
+        pickle.dump(detection_hash, fp)
     # Need to run once with known object detector and once with general object detector
-    breakpoint()
+    #breakpoint()
     return 1
 
 
