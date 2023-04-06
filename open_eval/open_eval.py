@@ -16,6 +16,9 @@ from detectron2.utils.file_io import PathManager
 
 from detectron2.evaluation.evaluator import DatasetEvaluator
 
+import pickle
+from collections import defaultdict
+
 
 class PascalVOCDetectionEvaluator(DatasetEvaluator):
     """
@@ -116,7 +119,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                 #breakpoint()
                 with open(res_file_template.format(cls_name), "w") as f:
                     f.write("\n".join(lines))
-
+                #breakpoint()
                 for thresh in range(50, 80, 25):
                 #for thresh in range(50, 80, 25):
                     # thresholds 50, 55, ...95
@@ -302,6 +305,17 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     confidence = np.array([float(x[1]) for x in splitlines])
     BB = np.array([[float(z) for z in x[2:]] for x in splitlines]).reshape(-1, 4)
 
+    # Open known detections file and remove IoU of 0.9 on the same image
+    known_hash = None
+    with open("known_detections_hash.pkl", "rb") as fp:
+        known_hash = pickle.load(fp)
+    unknown_hash = defaultdict(list)
+    # key: image id
+    # value: list of [score, xmin, ymin, xmax, ymax]
+    for key, value in zip(image_ids, BB):
+        unknown_hash[key].append(value)
+    #breakpoint()
+
     # sort by confidence
     sorted_ind = np.argsort(-confidence)
     BB = BB[sorted_ind, :]
@@ -312,6 +326,32 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     # For each bounding box
     tp = np.zeros(nd)
     fp = np.zeros(nd)
+    #breakpoint()
+    def iou(BBGT, bb):
+        # If there is a groundtruth object for this class
+        if BBGT.size > 0:
+            # compute overlaps
+            # intersection
+            ixmin = np.maximum(BBGT[:, 0], bb[0])
+            iymin = np.maximum(BBGT[:, 1], bb[1])
+            ixmax = np.minimum(BBGT[:, 2], bb[2])
+            iymax = np.minimum(BBGT[:, 3], bb[3])
+            iw = np.maximum(ixmax - ixmin + 1.0, 0.0)
+            ih = np.maximum(iymax - iymin + 1.0, 0.0)
+            inters = iw * ih
+
+            # union
+            uni = (
+                (bb[2] - bb[0] + 1.0) * (bb[3] - bb[1] + 1.0)
+                + (BBGT[:, 2] - BBGT[:, 0] + 1.0) * (BBGT[:, 3] - BBGT[:, 1] + 1.0)
+                - inters
+            )
+
+            overlaps = inters / uni
+            ovmax = np.max(overlaps)
+            jmax = np.argmax(overlaps)
+        return ovmax, jmax
+    
     for d in range(nd):
         R = class_recs[image_ids[d]]
         bb = BB[d, :].astype(float)
@@ -320,7 +360,15 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
         # BB contains all of the objects
         # iou returns the max iou for each pair
         BBGT = R["bbox"].astype(float)
-
+        # array([[418., 149., 615., 417.],
+        # [112., 158., 336., 452.],
+        #breakpoint
+        known_pred_boxes = None
+        flag = False
+        if image_ids[d] in known_hash.keys():
+            known_pred_boxes = known_hash[image_ids[d]]
+            flag = True
+            known_pred_boxes = np.array([elem[1:] for elem in known_pred_boxes]).astype(np.float)
         # If there is a groundtruth object for this class
         if BBGT.size > 0:
             # compute overlaps
@@ -347,9 +395,22 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
         if ovmax > ovthresh:
             if not R["difficult"][jmax]:
                 if not R["det"][jmax]:
-                    tp[d] = 1.0
+                    #tp[d] = 1.0
+                    # check for overlap with known detection
+                    #print("true positive unknown")
+                    # If there are predictions for known objects in the image
+                    if flag:
+                        o, j = iou(known_pred_boxes, bb)
+                        if o > 0.9:
+                            print("known overlap")
+                            fp[d] = 1.0
+                        else:
+                            tp[d] = 1.0
+                            R["det"][jmax] = 1
+                    else:
+                        tp[d] = 1.0
+                        R["det"][jmax] = 1
                     #print("detected unknown")
-                    R["det"][jmax] = 1
                 else:
                     fp[d] = 1.0
         else:
