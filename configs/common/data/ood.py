@@ -10,8 +10,8 @@ from detectron2.data import (
 )
 from detectron2.evaluation import COCOEvaluator
 from open_eval.open_eval import PascalVOCDetectionEvaluator
-from open_eval.open_world_eval import OWEvaluator
-from datasets.torchvision_datasets.open_world import OWDetection
+#from open_eval.open_world_eval import OWEvaluator
+#from datasets.torchvision_datasets.open_world import OWDetection
 from detrex.data import DetrDatasetMapper
 
 from pascal_voc_coco import register_pascal_voc
