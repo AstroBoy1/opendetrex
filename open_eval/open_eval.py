@@ -16,6 +16,9 @@ from detectron2.utils.file_io import PathManager
 
 from detectron2.evaluation.evaluator import DatasetEvaluator
 
+import selectivesearch
+from PIL import Image
+
 
 class PascalVOCDetectionEvaluator(DatasetEvaluator):
     """
@@ -130,9 +133,10 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         use_07_metric=self._is_2007,
                     )
                     aps[thresh].append(ap * 100)
-                    print("recall", rec[-1])
+                    #print("recall", rec[-1])
                     if thresh == 50 and cls_id == 0:
                         recs[50] = rec[-1]
+                    return
                 #breakpoint()
         ret = OrderedDict()
         mAP = {iou: np.mean(x) for iou, x in aps.items()}
@@ -265,7 +269,49 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     with PathManager.open(imagesetfile, "r") as f:
         lines = f.readlines()
     imagenames = [x.strip() for x in lines]
+    # Selective search on the imagenames
 
+    import skimage.data
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as mpatches
+    image_proposals = {}
+    for count, fn in enumerate(imagenames):
+        print(count, fn)
+        #breakpoint()
+        img_fn = "../PROB/data/VOC2007/JPEGImages/{}.jpg".format(fn)
+        pil_im = Image.open(img_fn)
+        img = np.asarray(pil_im)
+        if len(img.size) == 2:
+            print("converting grayscale")
+            img = img.convert("RGB")
+        img_lbl, regions = selectivesearch.selective_search(img, scale=500, sigma=0.9, min_size=10)
+        candidates = set()
+        # need to change the format from (xmin, ymin, width, height) to
+        # (xmin, ymin, xmax, ymax)
+        for r in regions:
+            # excluding same rectangle (with different segments)
+            if r['rect'] in candidates:
+                continue
+            # excluding regions smaller than 2000 pixels
+            # if r['size'] < 2000:
+            #     continue
+            # # distorted rects
+            x, y, w, h = r['rect']
+            # if w / h > 1.2 or h / w > 1.2:
+            #     continue
+            candidates.add((x, y, x + w, y + h))
+            #candidates.add(r['rect'])
+        image_proposals[fn] = candidates
+        # draw rectangles on the original image
+        # fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(6, 6))
+        # ax.imshow(img)
+        # for x, y, w, h in candidates:
+        #     print(x, y, w, h)
+        #     rect = mpatches.Rectangle(
+        #         (x, y), w, h, fill=False, edgecolor='red', linewidth=1)
+        #     ax.add_patch(rect)
+
+        # plt.show()
     # load annots
     recs = {}
     # some annotations missing for the image
@@ -293,28 +339,40 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     # if classname == "unknown" and ovthresh == 0.5:
     #     breakpoint()
     # read detetections
-    detfile = detpath.format(classname)
-    with open(detfile, "r") as f:
-        lines = f.readlines()
+    # detfile = detpath.format(classname)
+    # with open(detfile, "r") as f:
+    #     lines = f.readlines()
 
-    splitlines = [x.strip().split(" ") for x in lines]
-    image_ids = [x[0] for x in splitlines]
-    confidence = np.array([float(x[1]) for x in splitlines])
-    BB = np.array([[float(z) for z in x[2:]] for x in splitlines]).reshape(-1, 4)
+    # splitlines = [x.strip().split(" ") for x in lines]
+    # image_ids = [x[0] for x in splitlines]
+    # confidence = np.array([float(x[1]) for x in splitlines])
+    # BB = np.array([[float(z) for z in x[2:]] for x in splitlines]).reshape(-1, 4)
 
     # sort by confidence
-    sorted_ind = np.argsort(-confidence)
-    BB = BB[sorted_ind, :]
-    image_ids = [image_ids[x] for x in sorted_ind]
-    sorted_conf = [confidence[x] for x in sorted_ind]
+    # sorted_ind = np.argsort(-confidence)
+    # BB = BB[sorted_ind, :]
+    # image_ids = [image_ids[x] for x in sorted_ind]
+    # sorted_conf = [confidence[x] for x in sorted_ind]
     # go down dets and mark TPs and FPs
-    nd = len(image_ids)
+    #nd = len(image_ids)
+    
+    nd = 0
+    image_ids = []
+    bb_selective_search = []
+    for k, v in image_proposals.items():
+        num_d = len(v)
+        nd += num_d
+        bb_selective_search.extend(list(v))
+        for n in range(num_d):
+            image_ids.append(k)
     # For each bounding box
     tp = np.zeros(nd)
     fp = np.zeros(nd)
+    #breakpoint()
     for d in range(nd):
         R = class_recs[image_ids[d]]
-        bb = BB[d, :].astype(float)
+        bb = bb_selective_search[d]
+        #bb = BB[d, :].astype(float)
         ovmax = -np.inf
         # Can contain multiple bounding boxes in the ground truth
         # BB contains all of the objects
@@ -359,6 +417,7 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     fp = np.cumsum(fp)
     tp = np.cumsum(tp)
     rec = tp / float(npos)
+    print(rec[-1])
     # avoid divide by zero in case the first detection matches a difficult
     # ground truth
     prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
