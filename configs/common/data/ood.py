@@ -10,8 +10,8 @@ from detectron2.data import (
 )
 from detectron2.evaluation import COCOEvaluator
 from open_eval.open_eval import PascalVOCDetectionEvaluator
-from open_eval.open_world_eval import OWEvaluator
-from datasets.torchvision_datasets.open_world import OWDetection
+#from open_eval.open_world_eval import OWEvaluator
+#from datasets.torchvision_datasets.open_world import OWDetection
 from detrex.data import DetrDatasetMapper
 
 from pascal_voc_coco import register_pascal_voc
@@ -95,22 +95,23 @@ dataloader.train = L(build_detection_train_loader)(
                 scale=0.1
             ),
         ],
-        augmentation_with_crop=[
-            L(T.RandomFlip)(),
-            L(T.ResizeShortestEdge)(
-                short_edge_length=(400, 500, 600),
-                sample_style="choice",
-            ),
-            L(T.RandomCrop)(
-                crop_type="absolute_range",
-                crop_size=(384, 600),
-            ),
-            L(T.ResizeShortestEdge)(
-                short_edge_length=(480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800),
-                max_size=1333,
-                sample_style="choice",
-            ),
-        ],
+        augmentation_with_crop=None,
+        # augmentation_with_crop=[
+        #     L(T.RandomFlip)(),
+        #     L(T.ResizeShortestEdge)(
+        #         short_edge_length=(400, 500, 600),
+        #         sample_style="choice",
+        #     ),
+        #     L(T.RandomCrop)(
+        #         crop_type="absolute_range",
+        #         crop_size=(384, 600),
+        #     ),
+        #     L(T.ResizeShortestEdge)(
+        #         short_edge_length=(480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800),
+        #         max_size=1333,
+        #         sample_style="choice",
+        #     ),
+        # ],
         is_train=True,
         mask_on=False,
         img_format="RGB",

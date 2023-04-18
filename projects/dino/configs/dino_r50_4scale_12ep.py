@@ -43,6 +43,9 @@ model.device = train.device
 # known and unknown class
 model.num_classes = 2
 
+# Frequency channel
+model.backbone.stem.in_channels = 4
+
 # dropout parameters
 model.transformer.encoder.attn_dropout=0.1
 model.transformer.encoder.ffn_dropout=0.1
@@ -50,6 +53,7 @@ model.transformer.decoder.attn_dropout=0.1
 model.transformer.decoder.ffn_dropout=0.1
 model.criterion.matcher.cost_class=1.0
 
+model.dn_number = 1
 
 # modify optimizer config
 optimizer.lr = 1e-4

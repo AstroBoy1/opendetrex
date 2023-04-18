@@ -29,6 +29,9 @@ from detectron2.structures import Boxes, ImageList, Instances
 from detectron2.utils.events import get_event_storage
 from detectron2.data.detection_utils import convert_image_to_rgb
 
+import cv2 as cv
+from torchvision import transforms
+
 
 class DINO(nn.Module):
     """Implement DAB-Deformable-DETR in `DAB-DETR: Dynamic Anchor Boxes are Better Queries for DETR
@@ -176,7 +179,8 @@ class DINO(nn.Module):
         images = self.preprocess_image(batched_inputs)
 
         if self.training:
-            batch_size, _, H, W = images.tensor.shape
+            #breakpoint()
+            batch_size, num_channels, H, W = images.tensor.shape
             img_masks = images.tensor.new_ones(batch_size, H, W)
             for img_id in range(batch_size):
                 img_h, img_w = batched_inputs[img_id]["instances"].image_size
@@ -185,7 +189,6 @@ class DINO(nn.Module):
             batch_size, _, H, W = images.tensor.shape
             img_masks = images.tensor.new_zeros(batch_size, H, W)
 
-        # original features
         features = self.backbone(images.tensor)  # output feature dict
 
         # project backbone features to the reuired dimension of transformer
@@ -500,7 +503,17 @@ class DINO(nn.Module):
         return outputs_class, outputs_coord
 
     def preprocess_image(self, batched_inputs):
+        # # [Batch size, num_channels, height, width]
+        # canny_reshaped = canny_edges.reshape(shape[1], shape[0], 1)
+        #images_freq = torch.cat([images.tensor, images.tensor], dim=1)
         images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
+        for index, im in enumerate(batched_inputs):
+            im_tensor = im["image"]
+            gray_im = transforms.Grayscale()(im_tensor)
+            # canny works on one gpu, but with two needs to cpu
+            canny_edges = cv.Canny(np.array(gray_im[0].cpu()),100,200) # np cv array
+            canny_reshaped = canny_edges.reshape(1, canny_edges.shape[0], canny_edges.shape[1])
+            images[index] = torch.cat([images[index], torch.from_numpy(canny_reshaped).to(self.device)], dim=0)
         images = ImageList.from_tensors(images)
         return images
 
