@@ -504,8 +504,7 @@ class DINO(nn.Module):
 
     def preprocess_image(self, batched_inputs):
         # # [Batch size, num_channels, height, width]
-        # canny_reshaped = canny_edges.reshape(shape[1], shape[0], 1)
-        #images_freq = torch.cat([images.tensor, images.tensor], dim=1)
+        # Add canny edges to the 4th channel, without normalization
         images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
         for index, im in enumerate(batched_inputs):
             im_tensor = im["image"]

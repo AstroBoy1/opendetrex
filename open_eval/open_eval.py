@@ -112,6 +112,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                 cls_id = 0
                 cls_name = "aeroplane"
                 #print(cls_id, cls_name)
+                breakpoint()
                 lines = predictions.get(cls_id, [""])
                 #breakpoint()
                 with open(res_file_template.format(cls_name), "w") as f:
