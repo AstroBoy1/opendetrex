@@ -15,7 +15,9 @@ from detectron2.utils import comm
 from detectron2.utils.file_io import PathManager
 
 from detectron2.evaluation.evaluator import DatasetEvaluator
+from collections import defaultdict
 
+import pickle
 
 class PascalVOCDetectionEvaluator(DatasetEvaluator):
     """
@@ -89,7 +91,6 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
             for clsid, lines in predictions_per_rank.items():
                 predictions[clsid].extend(lines)
         del all_predictions
-        #breakpoint()
         self._logger.info(
             "Evaluating {} using {} metric. "
             "Note that results do not use the official Matlab API.".format(
@@ -112,9 +113,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                 cls_id = 0
                 cls_name = "aeroplane"
                 #print(cls_id, cls_name)
-                breakpoint()
                 lines = predictions.get(cls_id, [""])
-                #breakpoint()
                 with open(res_file_template.format(cls_name), "w") as f:
                     f.write("\n".join(lines))
 
@@ -130,16 +129,16 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         ovthresh=thresh / 100.0,
                         use_07_metric=self._is_2007,
                     )
+                    #return
                     aps[thresh].append(ap * 100)
                     print("recall", rec[-1])
                     if thresh == 50 and cls_id == 0:
                         recs[50] = rec[-1]
-                #breakpoint()
         ret = OrderedDict()
         mAP = {iou: np.mean(x) for iou, x in aps.items()}
         # returns dictionary of keys(metrics) and values
         ret["bbox"] = {"AP": np.mean(list(mAP.values())), "AP50": mAP[50], "AP75": mAP[75],
-        "unknown_recall50":recs[50]}
+                       "unknown_recall50": recs[50]}
         # the return values get put into metrics.json
         return ret
 
@@ -214,6 +213,70 @@ def voc_ap(rec, prec, use_07_metric=False):
     return ap
 
 
+"""
+    Non-max Suppression Algorithm
+    @param list  Object candidate bounding boxes
+    @param list  Confidence score of bounding boxes
+    @param float IoU threshold
+    @return Rest boxes after nms operation
+"""
+
+def nms(bounding_boxes, confidence_score, threshold):
+    # If no bounding boxes, return empty list
+    if len(bounding_boxes) == 0:
+        return [], []
+
+    # Bounding boxes
+    boxes = np.array(bounding_boxes)
+
+    # coordinates of bounding boxes
+    start_x = boxes[:, 0]
+    start_y = boxes[:, 1]
+    end_x = boxes[:, 2]
+    end_y = boxes[:, 3]
+
+    # Confidence scores of bounding boxes
+    score = np.array(confidence_score)
+
+    # Picked bounding boxes
+    picked_boxes = []
+    picked_score = []
+
+    # Compute areas of bounding boxes
+    areas = (end_x - start_x + 1) * (end_y - start_y + 1)
+
+    # Sort by confidence score of bounding boxes
+    order = np.argsort(score)
+
+    # Iterate bounding boxes
+    while order.size > 0:
+        # The index of largest confidence score
+        index = order[-1]
+
+        # Pick the bounding box with largest confidence score
+        picked_boxes.append(bounding_boxes[index])
+        picked_score.append(confidence_score[index])
+
+        # Compute ordinates of intersection-over-union(IOU)
+        x1 = np.maximum(start_x[index], start_x[order[:-1]])
+        x2 = np.minimum(end_x[index], end_x[order[:-1]])
+        y1 = np.maximum(start_y[index], start_y[order[:-1]])
+        y2 = np.minimum(end_y[index], end_y[order[:-1]])
+
+        # Compute areas of intersection-over-union
+        w = np.maximum(0.0, x2 - x1 + 1)
+        h = np.maximum(0.0, y2 - y1 + 1)
+        intersection = w * h
+
+        # Compute the ratio between intersection and union
+        ratio = intersection / (areas[index] + areas[order[:-1]] - intersection)
+
+        left = np.where(ratio < threshold)
+        order = order[left]
+
+    return picked_boxes, picked_score
+
+
 def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_metric=False):
     """rec, prec, ap = voc_eval(detpath,
                                 annopath,
@@ -260,7 +323,6 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
 
     T4_CLASS_NAMES.update(T3_CLASS_NAMES)
     T4_CLASS_NAMES.update(T2_CLASS_NAMES)
-    #breakpoint()
     # first load gt
     # read list of images
     with PathManager.open(imagesetfile, "r") as f:
@@ -283,16 +345,18 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     npos = 0
     for imagename in imagenames:
         R = [obj for obj in recs[imagename] if obj["name"] == classname]
+        # Get only unknown rectangles
         if classname == "aeroplane":
             R = [obj for obj in recs[imagename] if obj["name"] in T4_CLASS_NAMES]
+        # Get known rectangles only for t1
+        # if classname == "aeroplane":
+        #     R = [obj for obj in recs[imagename] if obj["name"] not in T4_CLASS_NAMES]
         bbox = np.array([x["bbox"] for x in R])
         difficult = np.array([x["difficult"] for x in R]).astype(np.bool)
         # difficult = np.array([False for x in R]).astype(np.bool)  # treat all "difficult" as GT
         det = [False] * len(R)
         npos = npos + sum(~difficult)
         class_recs[imagename] = {"bbox": bbox, "difficult": difficult, "det": det}
-    # if classname == "unknown" and ovthresh == 0.5:
-    #     breakpoint()
     # read detetections
     detfile = detpath.format(classname)
     with open(detfile, "r") as f:
@@ -313,6 +377,14 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     # For each bounding box
     tp = np.zeros(nd)
     fp = np.zeros(nd)
+
+    # 1 if not overlapping, used as a mask to select predictions that don't overlap with ground truth
+    non_overlap_indices = np.array([True] * nd)
+
+    # For each image id key, value is a list of bounding boxes
+    image_id_boxes = defaultdict(list)
+    image_id_scores = defaultdict(list)
+
     for d in range(nd):
         R = class_recs[image_ids[d]]
         bb = BB[d, :].astype(float)
@@ -349,12 +421,37 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
             if not R["difficult"][jmax]:
                 if not R["det"][jmax]:
                     tp[d] = 1.0
+                    # don't add the prediction as a potential label
+                    non_overlap_indices[d] = False
                     #print("detected unknown")
                     R["det"][jmax] = 1
                 else:
                     fp[d] = 1.0
         else:
             fp[d] = 1.0
+        #if tp[d] == 0:
+            # Add the bounding box prediction if there was no ground truth overlap
+
+            # image_id_boxes[image_ids[d]].append(bb)
+            # image_id_scores[image_ids[d]].append(sorted_conf[d])
+    # image_ids_nms_boxes = {}
+    # image_ids_nms_scores = {}
+    # for key in image_id_boxes.keys():
+    #     bounding_boxes = image_id_boxes[key]
+    #     #bounding_boxes = [(187, 82, 337, 317), (150, 67, 305, 282), (246, 121, 368, 304)]
+    #     #confidence_score = [0.9, 0.75, 0.8]
+    #     confidence_score = np.array(image_id_scores[key])
+    #     picked_boxes, picked_score = nms(bounding_boxes, confidence_score, threshold=ovthresh)
+    #     image_ids_nms_boxes[key] = picked_boxes
+    #     image_ids_nms_scores[key] = picked_score
+    # with open('pseudolabels/boxes.pickle', 'wb') as handle:
+    #     pickle.dump(image_ids_nms_boxes, handle)
+    # with open('pseudolabels/scores.pickle', 'wb') as handle:
+    #     pickle.dump(image_ids_nms_scores, handle)
+    # with open('pseudolabels/scores.pickle', 'rb') as handle:
+    #     bp = pickle.load(handle)
+    #     print(image_ids_nms_scores == bp)
+    # return
 
     # compute precision recall
     fp = np.cumsum(fp)
