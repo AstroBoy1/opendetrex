@@ -31,6 +31,7 @@ from detectron2.data.detection_utils import convert_image_to_rgb
 
 import cv2 as cv
 from torchvision import transforms
+from torchvision.transforms import GaussianBlur
 
 
 class DINO(nn.Module):
@@ -502,9 +503,50 @@ class DINO(nn.Module):
             dn_metas["output_known_lbs_bboxes"] = out
         return outputs_class, outputs_coord
 
+
     def preprocess_image(self, batched_inputs):
+        """GPU Gaussian followed by Sobel"""
+        # # [Batch size, num_channels, height, width]
+        # t.is_cuda
+        #breakpoint()
+        #import time
+        #start = time.time()
+        images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
+        kernel_v = [[1, 0, -1],
+                    [2, 0, -2],
+                    [1, 0, -1]]
+        kernel_h = [[1, 2, 1],
+                    [0, 0, 0],
+                    [-1, -2, -1]]
+        kernel_h = torch.FloatTensor(kernel_h).unsqueeze(0).unsqueeze(0).to(self.device)
+        kernel_v = torch.FloatTensor(kernel_v).unsqueeze(0).unsqueeze(0).to(self.device)
+        # https://homepages.inf.ed.ac.uk/rbf/HIPR2/gsmooth.htm
+        gaussian_kernel = [[1, 4, 7, 4, 1],
+                           [4, 16, 26, 16, 4],
+                           [7, 26, 41, 26, 7],
+                           [4, 16, 26, 16, 4],
+                           [1, 4, 7, 4, 1]]
+        gaussian_kernel = torch.FloatTensor([[x / 273 for x in y] for y in gaussian_kernel]).unsqueeze(0).unsqueeze(0).to(self.device)
+        for index, im in enumerate(images):
+            gray_im = transforms.Grayscale()(im)
+            #img = GaussianBlur(kernel_size=3, sigma=(0.1, 2.0))(gray_im)
+            img = F.conv2d(gray_im, gaussian_kernel, padding='same')
+            x_v = F.conv2d(img, kernel_v, padding='same')
+            x_h = F.conv2d(img, kernel_h, padding='same')
+            img = torch.sqrt(torch.pow(x_v, 2) + torch.pow(x_h, 2) + 1e-6)
+            images[index] = torch.cat([images[index], img], dim=0)
+        images = ImageList.from_tensors(images)
+        #end = time.time()
+        #print(end - start)
+        #breakpoint()
+        return images
+
+
+    def preprocess_image_canny(self, batched_inputs):
         # # [Batch size, num_channels, height, width]
         # Add canny edges to the 4th channel, without normalization
+        #import time
+        #start = time.time()
         images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
         for index, im in enumerate(batched_inputs):
             im_tensor = im["image"]
@@ -514,6 +556,9 @@ class DINO(nn.Module):
             canny_reshaped = canny_edges.reshape(1, canny_edges.shape[0], canny_edges.shape[1])
             images[index] = torch.cat([images[index], torch.from_numpy(canny_reshaped).to(self.device)], dim=0)
         images = ImageList.from_tensors(images)
+        #end = time.time()
+        #print(end - start)
+        #breakpoint()
         return images
 
     def inference(self, box_cls, box_pred, image_sizes):
