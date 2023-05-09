@@ -104,9 +104,9 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
             # For each class, calculate the ap
             #for cls_id, cls_name in enumerate(self._class_names):
             # first 20 for task 1
-            breakpoint()
-            with open("t1_known_predictions.pickle", "wb") as f:
-                pickle.dump(predictions, f)
+            #breakpoint()
+            #with open("t1_known_predictions.pickle", "wb") as f:
+                #pickle.dump(predictions, f)
             for cls_id, cls_name in enumerate(self._class_names[:20]):
                 lines = predictions.get(cls_id, [""])
 
@@ -272,10 +272,11 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     sorted_conf = [confidence[x] for x in sorted_ind]
     # go down dets and mark TPs and FPs
     nd = len(image_ids)
+    #breakpoint()
     tp = np.zeros(nd)
     fp = np.zeros(nd)
     #print("classname:", classname)
-    breakpoint()
+    #breakpoint()
     for d in range(nd):
         R = class_recs[image_ids[d]]
         bb = BB[d, :].astype(float)

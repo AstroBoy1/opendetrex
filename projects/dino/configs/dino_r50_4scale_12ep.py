@@ -1,16 +1,18 @@
 from detrex.config import get_config
 from .models.dino_r50 import model
+from detrex.config.configs.common.common_schedule import multistep_lr_scheduler
 
 # get default config
 dataloader = get_config("common/data/ood.py").dataloader
 #dataloader = get_config("common/data/coco_detr.py").dataloader
 optimizer = get_config("common/optim.py").AdamW
 lr_multiplier = get_config("common/coco_schedule.py").lr_multiplier_12ep
+#lr_multiplier = multistep_lr_scheduler(values=[1.0, 0.1], warmup_steps=0, num_updates=90000)
 train = get_config("common/train.py").train
 
 # modify training config
-#train.init_checkpoint = "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
-#train.init_checkpoint = "./output/dino_t1_known_90k/model_final.pth"
+train.init_checkpoint = "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
+#train.init_checkpoint = "./output/t1_known_90+29999/model_0029999.pth"
 train.output_dir = "./output/dino_r50_4scale_12ep"
 
 # max training iterations
@@ -39,9 +41,12 @@ model.device = train.device
 
 # 80 default classes for owod
 model.num_classes = 20
+#model.select_box_nums_for_evaluation = 100
+model.num_queries = 100
 
 # modify optimizer config
 optimizer.lr = 1e-4
+#optimizer.lr = 1e-5
 optimizer.betas = (0.9, 0.999)
 optimizer.weight_decay = 1e-4
 optimizer.params.lr_factor_func = lambda module_name: 0.1 if "backbone" in module_name else 1
@@ -54,6 +59,7 @@ dataloader.train.num_workers = 16
 # surpose you're using 4 gpus for training and the batch size for
 # each gpu is 16/4 = 4
 dataloader.train.total_batch_size = 8
+#dataloader.train.total_batch_size = 4 
 
 # dump the testing results into output_dir for visualization
 dataloader.evaluator.output_dir = train.output_dir

@@ -109,6 +109,8 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             # difficult = int(obj.find("difficult").text)
             # if difficult == 1:
             # continue
+            #if cls not in VOC_CLASS_NAMES:
+            #    breakpoint()
             bbox = obj.find("bndbox")
             bbox = [float(bbox.find(x).text) for x in ["xmin", "ymin", "xmax", "ymax"]]
             # Original annotations are integers in the range [1, W or H]
