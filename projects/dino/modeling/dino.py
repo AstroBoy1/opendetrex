@@ -530,11 +530,11 @@ class DINO(nn.Module):
         for index, im in enumerate(images):
             gray_im = transforms.Grayscale()(im)
             #img = GaussianBlur(kernel_size=3, sigma=(0.1, 2.0))(gray_im)
-            img = F.conv2d(gray_im, gaussian_kernel, padding='same')
-            x_v = F.conv2d(img, kernel_v, padding='same')
-            x_h = F.conv2d(img, kernel_h, padding='same')
-            img = torch.sqrt(torch.pow(x_v, 2) + torch.pow(x_h, 2) + 1e-6)
-            images[index] = torch.cat([images[index], img], dim=0)
+            smooth_img = F.conv2d(gray_im, gaussian_kernel, padding='same')
+            x_v = F.conv2d(smooth_img, kernel_v, padding='same')
+            x_h = F.conv2d(smooth_img, kernel_h, padding='same')
+            edge_im = torch.sqrt(torch.pow(x_v, 2) + torch.pow(x_h, 2) + 1e-6)
+            images[index] = torch.cat([images[index], edge_im], dim=0)
         images = ImageList.from_tensors(images)
         #end = time.time()
         #print(end - start)
@@ -542,7 +542,7 @@ class DINO(nn.Module):
         return images
 
 
-    def preprocess_image_canny(self, batched_inputs):
+    def preprocess_image2(self, batched_inputs):
         # # [Batch size, num_channels, height, width]
         # Add canny edges to the 4th channel, without normalization
         #import time

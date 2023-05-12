@@ -44,7 +44,7 @@ model.device = train.device
 
 # known and unknown class
 model.num_classes = 2
-model.select_box_nums_for_evaluation = 100
+#model.select_box_nums_for_evaluation = 300
 
 # Frequency channel
 model.backbone.stem.in_channels = 4
@@ -57,7 +57,7 @@ model.transformer.decoder.ffn_dropout = 0.1
 model.criterion.matcher.cost_class = 1.0
 
 model.dn_number = 1
-model.num_queries = 100
+#model.num_queries = 100
 
 # modify optimizer config
 optimizer.lr = 1e-4
