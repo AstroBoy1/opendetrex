@@ -83,10 +83,15 @@ class DetrDatasetMapper:
         Returns:
             dict: a format that builtin models in detectron2 accept
         """
+        #breakpoint()
         dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
         image = utils.read_image(dataset_dict["file_name"], format=self.img_format)
         utils.check_image_size(dataset_dict, image)
-
+        if self.is_train:
+            edges = dataset_dict["edges"]
+        #print(edges.shape, image.shape)
+        #print(self.augmentation[:2])
+        # Only apply the first two augmentations to the edges (flip and resize)
         if self.augmentation_with_crop is None:
             image, transforms = T.apply_transform_gens(self.augmentation, image)
         else:
@@ -94,7 +99,12 @@ class DetrDatasetMapper:
                 image, transforms = T.apply_transform_gens(self.augmentation, image)
             else:
                 image, transforms = T.apply_transform_gens(self.augmentation_with_crop, image)
-
+        #print(transforms[:2])
+        if self.is_train:
+            edges, _ = T.apply_transform_gens(transforms[:2], edges)
+            dataset_dict["edges"] = torch.as_tensor(np.ascontiguousarray(edges))
+            #print(dataset_dict["edges"].shape)
+        #print(edges.shape, image.shape)
         image_shape = image.shape[:2]  # h, w
 
         # Pytorch's dataloader is efficient on torch.Tensor due to shared-memory,
@@ -122,4 +132,5 @@ class DetrDatasetMapper:
             ]
             instances = utils.annotations_to_instances(annos, image_shape)
             dataset_dict["instances"] = utils.filter_empty_instances(instances)
+        #print(dataset_dict["edges"].shape, dataset_dict["image"].shape)
         return dataset_dict

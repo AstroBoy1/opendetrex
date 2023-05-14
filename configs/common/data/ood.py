@@ -1,5 +1,4 @@
 from omegaconf import OmegaConf
-
 import detectron2.data.transforms as T
 from detectron2.config import LazyCall as L
 from detectron2.data import (
@@ -10,13 +9,9 @@ from detectron2.data import (
 )
 from detectron2.evaluation import COCOEvaluator
 from open_eval.open_eval import PascalVOCDetectionEvaluator
-#from open_eval.open_world_eval import OWEvaluator
-#from datasets.torchvision_datasets.open_world import OWDetection
 from detrex.data import DetrDatasetMapper
-
 from pascal_voc_coco import register_pascal_voc
 import itertools
-
 from torchvision.transforms import ColorJitter
 
 dataloader = OmegaConf.create()
@@ -119,20 +114,7 @@ dataloader.train = L(build_detection_train_loader)(
     total_batch_size=16,
     num_workers=4,
 )
-# dataloader.test = L(build_detection_test_loader)(
-#     dataset=L(get_detection_dataset_dicts)(names="voc_2007_val", filter_empty=False),
-#     mapper=L(DatasetMapper)(
-#         augmentations=[
-#             L(T.ResizeShortestEdge)(
-#                 short_edge_length=800,
-#                 max_size=1333,
-#             ),
-#         ],
-#         is_train=False,
-#         image_format="RGB",
-#     ),
-#     num_workers=4,
-# )
+
 
 dataloader.test = L(build_detection_test_loader)(
     dataset=L(get_detection_dataset_dicts)(names="towod_test", filter_empty=False),
@@ -151,45 +133,7 @@ dataloader.test = L(build_detection_test_loader)(
     num_workers=4,
 )
 
-# dataloader.test = L(build_detection_test_loader)(
-#     dataset=L(get_detection_dataset_dicts)(names="voc_2007_test", filter_empty=False),
-#     mapper=L(DetrDatasetMapper)(
-#         augmentation=[
-#             L(T.ResizeShortestEdge)(
-#                 short_edge_length=800,
-#                 max_size=1333,
-#             ),
-#         ],
-#         augmentation_with_crop=None,
-#         is_train=False,
-#         mask_on=False,
-#         img_format="RGB",
-#     ),
-#     num_workers=4,
-# )
-
-
-# class ARGS:
-#     def __init__(self):
-#         self.PREV_INTRODUCED_CLS = 0
-#         self.val_root = "~/hpc-share/omorim/projects/PROB/data/OWOD"
-#         self.test_set = "owod_all_task_test"
-#         self.val_dataset = 'TOWOD'
-#
-#
-# args = ARGS()
-#
-#
-# dataset_val = OWDetection(args, args.val_root, image_set=args.test_set, dataset=args.val_dataset,
-#                           transforms=None)
-#
-# dataloader.evaluator = L(OWEvaluator)(
-#     voc_gt=dataset_val, iou_types=('bbox',)
-# )
 
 dataloader.evaluator = L(PascalVOCDetectionEvaluator)(
     dataset_name="${..test.dataset.names}",
 )
-# dataloader.evaluator = L(COCOEvaluator)(
-#    dataset_name="${..test.dataset.names}",
-# )

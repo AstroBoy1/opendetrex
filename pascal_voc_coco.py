@@ -11,6 +11,7 @@ from detectron2.structures import BoxMode
 from detectron2.utils.file_io import PathManager
 
 import itertools
+import cv2 as cv
 
 __all__ = ["load_voc_instances", "register_pascal_voc"]
 
@@ -77,6 +78,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
         split (str): one of "train", "test", "val", "trainval"
         class_names: list or tuple of class names
     """
+    #breakpoint()
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:
         fileids = np.loadtxt(f, dtype=np.str)
     # fileids is a string
@@ -86,7 +88,10 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     for fileid in fileids:
         anno_file = os.path.join(annotation_dirname, fileid + ".xml")
         jpeg_file = os.path.join(dirname, "JPEGImages", fileid + ".jpg")
-
+        edge_image = None
+        if split == 'train':
+            canny_file = os.path.join(dirname, "CannyImages", fileid + ".jpg")
+            edge_image = cv.imread(canny_file, cv.IMREAD_GRAYSCALE)
         with PathManager.open(anno_file) as f:
             tree = ET.parse(f)
 
@@ -96,6 +101,8 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             "height": int(tree.findall("./size/height")[0].text),
             "width": int(tree.findall("./size/width")[0].text),
         }
+        if split == 'train':
+            r["edges"] = edge_image
         instances = []
 
         for obj in tree.findall("object"):
@@ -129,6 +136,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             )
         r["annotations"] = instances
         dicts.append(r)
+    #breakpoint()
         # returns filename which is the full filepath, image_id which is just a string,
         # image height, width, and bounding box annotations with category id, 4 coordinate bbox, and mode
     return dicts
