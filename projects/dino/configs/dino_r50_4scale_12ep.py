@@ -9,9 +9,9 @@ lr_multiplier = get_config("common/coco_schedule.py").lr_multiplier_12ep
 train = get_config("common/train.py").train
 
 # modify training config
-train.init_checkpoint = "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
+#train.init_checkpoint = "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
 #train.init_checkpoint = "./output/dino_agnostic_edges/model_0084999.pth"
-train.output_dir = "./output/gpu_edges"
+train.output_dir = "./output/gpu_edges_scratch"
 
 # max training iterations, batch size of 4, 16,551 examples
 # 16551 / 4 = 4137.75 iterations per epoch
