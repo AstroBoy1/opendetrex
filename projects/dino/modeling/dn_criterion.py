@@ -18,6 +18,7 @@ import torch
 from detrex.utils import get_world_size, is_dist_avail_and_initialized
 
 from .two_stage_criterion import TwoStageCriterion
+from detrex.layers import box_cxcywh_to_xyxy
 
 
 class DINOCriterion(TwoStageCriterion):
@@ -52,7 +53,42 @@ class DINOCriterion(TwoStageCriterion):
         dn_losses = self.compute_dn_loss(dn_metas, targets, aux_num, num_boxes)
         losses.update(dn_losses)
 
+        # Loss is a dictionary, we want to add the edge loss here
+        # Calculate edge losses
+        # For each target image
+        for index in range(len(targets)):
+            breakpoint()
+            # (height, width)
+            target_edge = targets[index]["edges"]
+            image_size = targets[index]["image_size"]
+            # (num_predictions=900, 4)
+            pred_boxes = outputs['pred_boxes'][index]
+            w, h = image_size[1], image_size[0]
+            image_size_xyxy = torch.as_tensor([w, h, w, h], dtype=torch.float).to(pred_boxes.device)
+            # pick a random box
+            box_index = 0
+            xmin, ymin, xmax, ymax = box_cxcywh_to_xyxy(pred_boxes[box_index]) * image_size_xyxy
+            # convert to (xmin, ymin, xmax, ymax)
+
+            def convert(num):
+                return torch.round(num).to(torch.int32)
+
+            xmin, ymin, xmax, ymax = convert(xmin), convert(ymin), convert(xmax), convert(ymax)
+            xmin, ymin = torch.max(xmin, torch.tensor(0)), torch.max(ymin, torch.tensor(0))
+            xmax, ymax = torch.min(torch.tensor(image_size[1]), xmax), torch.min(torch.tensor(image_size[0]), ymax)
+            # ensure within image bounds
+
+            edge_in_box = torch.any(target_edge[ymin:ymax, xmin:xmax])
+            # If there is no edge in the box, we find the closest edge and use that as the loss
+            if edge_in_box == 0:
+                idx = torch.argwhere(target_edge)
+                pred_row, pred_col = (ymin + ymax) // 2, (xmin + xmax) // 2
+                pred = torch.tensor((pred_row, pred_col)).to(pred_boxes.device)
+                nearest_row, nearest_col = idx[((idx - pred) ** 2).sum(1).argmin()]
+                print("nearest row:", nearest_row, "nearest col", nearest_col)
+                print("pred row:", pred_row, "pred col:", pred_col)
         return losses
+
 
     def compute_dn_loss(self, dn_metas, targets, aux_num, num_boxes):
         """
