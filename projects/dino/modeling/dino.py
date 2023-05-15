@@ -180,7 +180,6 @@ class DINO(nn.Module):
         images = self.preprocess_image(batched_inputs)
 
         if self.training:
-            #breakpoint()
             batch_size, num_channels, H, W = images.tensor.shape
             img_masks = images.tensor.new_ones(batch_size, H, W)
             for img_id in range(batch_size):
@@ -218,6 +217,13 @@ class DINO(nn.Module):
                 hidden_dim=self.embed_dim,
                 label_enc=self.label_enc,
             )
+            #breakpoint()
+            for t, b in zip(targets, batched_inputs):
+                # (height, width)
+                #breakpoint()
+                t["image_size"] = b["instances"].image_size
+                t["edges"] = b["edges"].to(self.device)
+            #breakpoint()
         else:
             input_query_label, input_query_bbox, attn_mask, dn_meta = None, None, None, None
         query_embeds = (input_query_label, input_query_bbox)
@@ -290,11 +296,13 @@ class DINO(nn.Module):
                     self.visualize_training(batched_inputs, results)
             
             # compute loss
+            #breakpoint()
             loss_dict = self.criterion(output, targets, dn_meta)
             weight_dict = self.criterion.weight_dict
             for k in loss_dict.keys():
                 if k in weight_dict:
                     loss_dict[k] *= weight_dict[k]
+            #breakpoint()
             return loss_dict
         else:
             box_cls = output["pred_logits"]
@@ -508,9 +516,6 @@ class DINO(nn.Module):
         """GPU Gaussian followed by Sobel"""
         # # [Batch size, num_channels, height, width]
         # t.is_cuda
-        #breakpoint()
-        #import time
-        #start = time.time()
         images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
         kernel_v = [[1, 0, -1],
                     [2, 0, -2],
@@ -529,24 +534,18 @@ class DINO(nn.Module):
         gaussian_kernel = torch.FloatTensor([[x / 273 for x in y] for y in gaussian_kernel]).unsqueeze(0).unsqueeze(0).to(self.device)
         for index, im in enumerate(images):
             gray_im = transforms.Grayscale()(im)
-            #img = GaussianBlur(kernel_size=3, sigma=(0.1, 2.0))(gray_im)
             smooth_img = F.conv2d(gray_im, gaussian_kernel, padding='same')
             x_v = F.conv2d(smooth_img, kernel_v, padding='same')
             x_h = F.conv2d(smooth_img, kernel_h, padding='same')
             edge_im = torch.sqrt(torch.pow(x_v, 2) + torch.pow(x_h, 2) + 1e-6)
             images[index] = torch.cat([images[index], edge_im], dim=0)
         images = ImageList.from_tensors(images)
-        #end = time.time()
-        #print(end - start)
-        #breakpoint()
         return images
 
 
     def preprocess_image2(self, batched_inputs):
         # # [Batch size, num_channels, height, width]
         # Add canny edges to the 4th channel, without normalization
-        #import time
-        #start = time.time()
         images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
         for index, im in enumerate(batched_inputs):
             im_tensor = im["image"]
@@ -556,9 +555,6 @@ class DINO(nn.Module):
             canny_reshaped = canny_edges.reshape(1, canny_edges.shape[0], canny_edges.shape[1])
             images[index] = torch.cat([images[index], torch.from_numpy(canny_reshaped).to(self.device)], dim=0)
         images = ImageList.from_tensors(images)
-        #end = time.time()
-        #print(end - start)
-        #breakpoint()
         return images
 
     def inference(self, box_cls, box_pred, image_sizes):
@@ -610,16 +606,17 @@ class DINO(nn.Module):
             result.scores = scores_per_image
             result.pred_classes = labels_per_image
             results.append(result)
-            #breakpoint()
         return results
 
     def prepare_targets(self, targets):
+        # Converts the box coordinates to center coordinates
         new_targets = []
         for targets_per_image in targets:
             h, w = targets_per_image.image_size
             image_size_xyxy = torch.as_tensor([w, h, w, h], dtype=torch.float, device=self.device)
             gt_classes = targets_per_image.gt_classes
             gt_boxes = targets_per_image.gt_boxes.tensor / image_size_xyxy
+            # convert to centerx, centery, width, height
             gt_boxes = box_xyxy_to_cxcywh(gt_boxes)
             new_targets.append({"labels": gt_classes, "boxes": gt_boxes})
         return new_targets

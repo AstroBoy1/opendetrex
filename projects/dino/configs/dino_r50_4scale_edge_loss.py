@@ -9,8 +9,7 @@ lr_multiplier = get_config("common/coco_schedule.py").lr_multiplier_12ep
 train = get_config("common/train.py").train
 
 # modify training config
-#train.init_checkpoint = "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
-#train.init_checkpoint = "./output/dino_agnostic_edges/model_0084999.pth"
+train.init_checkpoint = "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
 train.output_dir = "./output/edge_loss"
 
 # max training iterations, batch size of 4, 16,551 examples

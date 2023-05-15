@@ -88,10 +88,12 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     for fileid in fileids:
         anno_file = os.path.join(annotation_dirname, fileid + ".xml")
         jpeg_file = os.path.join(dirname, "JPEGImages", fileid + ".jpg")
-        edge_image = None
-        if split == 'train':
-            canny_file = os.path.join(dirname, "CannyImages", fileid + ".jpg")
-            edge_image = cv.imread(canny_file, cv.IMREAD_GRAYSCALE)
+        # edge_image = None
+        # if split == 'train':
+        #     canny_file = os.path.join(dirname, "CannyImages", fileid + ".npy")
+        #     with open(canny_file, "rb") as fp:
+        #         edge_image = np.load(fp)
+            #edge_image = cv.imread(canny_file, cv.IMREAD_GRAYSCALE)
         with PathManager.open(anno_file) as f:
             tree = ET.parse(f)
 
@@ -102,7 +104,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             "width": int(tree.findall("./size/width")[0].text),
         }
         if split == 'train':
-            r["edges"] = edge_image
+            r["edge_file"] = os.path.join(dirname, "CannyImages", fileid + ".npy")
         instances = []
 
         for obj in tree.findall("object"):

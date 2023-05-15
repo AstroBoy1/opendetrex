@@ -87,8 +87,11 @@ class DetrDatasetMapper:
         dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
         image = utils.read_image(dataset_dict["file_name"], format=self.img_format)
         utils.check_image_size(dataset_dict, image)
+        edges = None
         if self.is_train:
-            edges = dataset_dict["edges"]
+            with open(dataset_dict["edge_file"], "rb") as fp:
+                edges = np.load(fp)
+        #     edges = dataset_dict["edges"]
         #print(edges.shape, image.shape)
         #print(self.augmentation[:2])
         # Only apply the first two augmentations to the edges (flip and resize)
@@ -101,8 +104,11 @@ class DetrDatasetMapper:
                 image, transforms = T.apply_transform_gens(self.augmentation_with_crop, image)
         #print(transforms[:2])
         if self.is_train:
-            edges, _ = T.apply_transform_gens(transforms[:2], edges)
-            dataset_dict["edges"] = torch.as_tensor(np.ascontiguousarray(edges))
+            edges, _ = T.apply_transform_gens(transforms[:2], edges.astype(np.uint8))
+            #edges.setflags(write=True)
+            #edges = np.ascontiguousarray(edges)
+            # without copy, it is not writeable (warning)
+            dataset_dict["edges"] = torch.as_tensor(edges.copy())
             #print(dataset_dict["edges"].shape)
         #print(edges.shape, image.shape)
         image_shape = image.shape[:2]  # h, w
