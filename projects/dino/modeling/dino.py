@@ -299,6 +299,8 @@ class DINO(nn.Module):
             #breakpoint()
             loss_dict = self.criterion(output, targets, dn_meta)
             weight_dict = self.criterion.weight_dict
+            # Scales the losses by the weight_dict
+            #breakpoint()
             for k in loss_dict.keys():
                 if k in weight_dict:
                     loss_dict[k] *= weight_dict[k]

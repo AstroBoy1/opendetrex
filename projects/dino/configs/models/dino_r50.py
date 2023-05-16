@@ -93,6 +93,7 @@ model = L(DINO)(
             "loss_class_dn": 1,
             "loss_bbox_dn": 5.0,
             "loss_giou_dn": 2.0,
+            "edge_loss": 5.0,
         },
         loss_class_type="focal_loss",
         alpha=0.25,

@@ -15,8 +15,8 @@ train.output_dir = "./output/edge_loss"
 # max training iterations, batch size of 4, 16,551 examples
 # 16551 / 4 = 4137.75 iterations per epoch
 # 90000 / 4137.75 = 21 epochs
-#train.max_iter = 90000
-train.max_iter = 180000
+train.max_iter = 90000
+#train.max_iter = 180000
 
 # fast debug train.max_iter=20, train.eval_period=10, train.log_period=1
 train.fast_dev_run.enabled = False
@@ -27,7 +27,7 @@ train.amp = dict(enabled=True)
 train.eval_period = 5000
 
 # log training infomation every 20 iters
-train.log_period = 200
+train.log_period = 20
 
 # save checkpoint every 5000 iters
 train.checkpointer.period = 5000

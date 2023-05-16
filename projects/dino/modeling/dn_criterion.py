@@ -19,6 +19,8 @@ from detrex.utils import get_world_size, is_dist_avail_and_initialized
 
 from .two_stage_criterion import TwoStageCriterion
 from detrex.layers import box_cxcywh_to_xyxy
+import torch.nn.functional as F
+import random
 
 
 class DINOCriterion(TwoStageCriterion):
@@ -56,9 +58,11 @@ class DINOCriterion(TwoStageCriterion):
         # Loss is a dictionary, we want to add the edge loss here
         # Calculate edge losses
         # For each target image
+        # start with tensor incase loss is 0, then can't detach
+        edge_loss_total = torch.tensor(0, dtype=torch.float, device=outputs["pred_boxes"].device)
         for index in range(len(targets)):
-            breakpoint()
             # (height, width)
+            #breakpoint()
             target_edge = targets[index]["edges"]
             image_size = targets[index]["image_size"]
             # (num_predictions=900, 4)
@@ -66,7 +70,7 @@ class DINOCriterion(TwoStageCriterion):
             w, h = image_size[1], image_size[0]
             image_size_xyxy = torch.as_tensor([w, h, w, h], dtype=torch.float).to(pred_boxes.device)
             # pick a random box
-            box_index = 0
+            box_index = random.randrange(len(pred_boxes))
             xmin, ymin, xmax, ymax = box_cxcywh_to_xyxy(pred_boxes[box_index]) * image_size_xyxy
             # convert to (xmin, ymin, xmax, ymax)
 
@@ -85,8 +89,18 @@ class DINOCriterion(TwoStageCriterion):
                 pred_row, pred_col = (ymin + ymax) // 2, (xmin + xmax) // 2
                 pred = torch.tensor((pred_row, pred_col)).to(pred_boxes.device)
                 nearest_row, nearest_col = idx[((idx - pred) ** 2).sum(1).argmin()]
-                print("nearest row:", nearest_row, "nearest col", nearest_col)
-                print("pred row:", pred_row, "pred col:", pred_col)
+                #print("nearest row:", nearest_row, "nearest col", nearest_col)
+                #print("pred row:", pred_row, "pred col:", pred_col)
+                nearest_row_norm, nearest_col_norm = nearest_row / h, nearest_col / w
+                target_pixel = torch.as_tensor([nearest_col_norm, nearest_row_norm]).to(pred_boxes.device)
+                edge_loss = F.l1_loss(pred_boxes[box_index][:2], target_pixel, reduction="mean")
+                #print("edge loss", edge_loss)
+                edge_loss_total += edge_loss
+                #breakpoint()
+        #breakpoint()
+        # needs to be float to multiply by weight_dict
+        losses["edge_loss"] = edge_loss_total.float()
+        #breakpoint()
         return losses
 
 
