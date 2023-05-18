@@ -140,6 +140,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         ret["bbox"] = {"AP": np.mean(list(mAP.values())), "AP50": mAP[50], "AP75": mAP[75],
                        "unknown_recall50": recs[50]}
         # the return values get put into metrics.json
+        #breakpoint()
         return ret
 
 

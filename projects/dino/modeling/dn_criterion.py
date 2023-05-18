@@ -86,17 +86,22 @@ class DINOCriterion(TwoStageCriterion):
             # If there is no edge in the box, we find the closest edge and use that as the loss
             if edge_in_box == 0:
                 idx = torch.argwhere(target_edge)
-                pred_row, pred_col = (ymin + ymax) // 2, (xmin + xmax) // 2
-                pred = torch.tensor((pred_row, pred_col)).to(pred_boxes.device)
-                nearest_row, nearest_col = idx[((idx - pred) ** 2).sum(1).argmin()]
-                #print("nearest row:", nearest_row, "nearest col", nearest_col)
-                #print("pred row:", pred_row, "pred col:", pred_col)
-                nearest_row_norm, nearest_col_norm = nearest_row / h, nearest_col / w
-                target_pixel = torch.as_tensor([nearest_col_norm, nearest_row_norm]).to(pred_boxes.device)
-                edge_loss = F.l1_loss(pred_boxes[box_index][:2], target_pixel, reduction="mean")
-                #print("edge loss", edge_loss)
-                edge_loss_total += edge_loss
-                #breakpoint()
+                # Possible to contain no edges
+                if len(idx) > 0:
+                    pred_row, pred_col = (ymin + ymax) // 2, (xmin + xmax) // 2
+                    pred = torch.tensor((pred_row, pred_col)).to(pred_boxes.device)
+                    #breakpoint()
+                    nearest_row, nearest_col = idx[((idx - pred) ** 2).sum(1).argmin()]
+                    #print("nearest row:", nearest_row, "nearest col", nearest_col)
+                    #print("pred row:", pred_row, "pred col:", pred_col)
+                    nearest_row_norm, nearest_col_norm = nearest_row / h, nearest_col / w
+                    target_pixel = torch.as_tensor([nearest_col_norm, nearest_row_norm]).to(pred_boxes.device)
+                    edge_loss = F.l1_loss(pred_boxes[box_index][:2], target_pixel, reduction="mean")
+                    #print("edge loss", edge_loss)
+                    edge_loss_total += edge_loss
+                    #breakpoint()
+                else:
+                    print("no edges in target")
         #breakpoint()
         # needs to be float to multiply by weight_dict
         losses["edge_loss"] = edge_loss_total.float()
