@@ -4,28 +4,24 @@ from detrex.config.configs.common.common_schedule import multistep_lr_scheduler
 
 # get default config
 dataloader = get_config("common/data/ood.py").dataloader
-#dataloader = get_config("common/data/coco_detr.py").dataloader
 optimizer = get_config("common/optim.py").AdamW
-lr_multiplier = get_config("common/coco_schedule.py").lr_multiplier_50ep
-#lr_multiplier = get_config("common/coco_schedule.py").lr_multiplier_12ep
+lr_multiplier = get_config("common/coco_schedule.py").lr_multiplier_24ep
 #lr_multiplier = multistep_lr_scheduler(values=[1.0, 0.1], warmup_steps=0, num_updates=90000)
 train = get_config("common/train.py").train
 
-# modify training config
-#train.init_checkpoint = "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
-#train.init_checkpoint = "./output/t1_known_90+29999/model_0029999.pth"
-train.init_checkpoint = "./output/dino_r50_4scale_t1_180000/model_0039999.pth"
-train.output_dir = "./output/dino_r50_4scale_t1_lr1e-5"
-
+# modify model config
 # use the original implementation of dab-detr position embedding in 24 epochs training.
 model.position_embedding.temperature = 20
 model.position_embedding.offset = 0.0
 
-train.amp = dict(enabled=True)
+# modify training config
+train.init_checkpoint = "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
+#train.init_checkpoint = "./output/t1_known_90+29999/model_0029999.pth"
+train.output_dir = "./output/t2/dino_r50_4scale_t2"
 
 # max training iterations
 train.max_iter = 180000
-#train.max_iter = 90000
+train.amp = dict(enabled=True)
 
 # fast debug train.max_iter=20, train.eval_period=10, train.log_period=1
 train.fast_dev_run.enabled = False
@@ -54,7 +50,7 @@ model.num_classes = 20
 model.num_queries = 100
 
 # modify optimizer config
-optimizer.lr = 1e-5
+optimizer.lr = 1e-4
 #optimizer.lr = 1e-5
 optimizer.betas = (0.9, 0.999)
 optimizer.weight_decay = 1e-4
@@ -68,7 +64,6 @@ dataloader.train.num_workers = 8
 # surpose you're using 4 gpus for training and the batch size for
 # each gpu is 16/4 = 4
 dataloader.train.total_batch_size = 8
-#dataloader.train.total_batch_size = 4 
 
 # dump the testing results into output_dir for visualization
 dataloader.evaluator.output_dir = train.output_dir

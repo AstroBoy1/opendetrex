@@ -96,7 +96,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                 self._dataset_name, 2007 if self._is_2007 else 2012
             )
         )
-
+        NUM_CLASSES = 20
         with tempfile.TemporaryDirectory(prefix="pascal_voc_eval_") as dirname:
             res_file_template = os.path.join(dirname, "{}.txt")
 
@@ -107,7 +107,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
             #breakpoint()
             #with open("t1_known_predictions.pickle", "wb") as f:
                 #pickle.dump(predictions, f)
-            for cls_id, cls_name in enumerate(self._class_names[:20]):
+            for cls_id, cls_name in enumerate(self._class_names[:NUM_CLASSES]):
                 lines = predictions.get(cls_id, [""])
 
                 with open(res_file_template.format(cls_name), "w") as f:

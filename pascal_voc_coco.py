@@ -97,7 +97,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             "width": int(tree.findall("./size/width")[0].text),
         }
         instances = []
-
+        NUM_CLASSES = 20
         for obj in tree.findall("object"):
             cls = obj.find("name").text
             # In the towod dataset creation, voc labels were converted to coco
@@ -119,9 +119,11 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             # In coordinate space this is represented by (xmin=0, xmax=W)
             bbox[0] -= 1.0
             bbox[1] -= 1.0
-            instances.append(
-                {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
-            )
+            cls_index = class_names.index(cls)
+            if cls_index < NUM_CLASSES:
+                instances.append(
+                    {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
+                )
         r["annotations"] = instances
         dicts.append(r)
         # returns filename which is the full filepath, image_id which is just a string,
