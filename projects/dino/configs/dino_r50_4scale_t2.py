@@ -15,8 +15,9 @@ model.position_embedding.temperature = 20
 model.position_embedding.offset = 0.0
 
 # modify training config
-train.init_checkpoint = "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
+#train.init_checkpoint = "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
 #train.init_checkpoint = "./output/t1_known_90+29999/model_0029999.pth"
+#train.init_checkpoint = "./output/dino_r50_4scale_t1_lr1e-5/model_0024999.pth"
 train.output_dir = "./output/t2/dino_r50_4scale_t2"
 
 # max training iterations
@@ -45,7 +46,7 @@ train.device = "cuda"
 model.device = train.device
 
 # 80 default classes for owod
-model.num_classes = 20
+model.num_classes = 40
 #model.select_box_nums_for_evaluation = 100
 model.num_queries = 100
 

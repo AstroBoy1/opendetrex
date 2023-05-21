@@ -83,6 +83,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     # Needs to read many small annotation files. Makes sense at local
     annotation_dirname = PathManager.get_local_path(os.path.join(dirname, "Annotations/"))
     dicts = []
+    total_unknown = 0
     for fileid in fileids:
         anno_file = os.path.join(annotation_dirname, fileid + ".xml")
         jpeg_file = os.path.join(dirname, "JPEGImages", fileid + ".jpg")
@@ -97,7 +98,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             "width": int(tree.findall("./size/width")[0].text),
         }
         instances = []
-        NUM_CLASSES = 20
+        NUM_CLASSES = 40
         for obj in tree.findall("object"):
             cls = obj.find("name").text
             # In the towod dataset creation, voc labels were converted to coco
@@ -119,15 +120,20 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             # In coordinate space this is represented by (xmin=0, xmax=W)
             bbox[0] -= 1.0
             bbox[1] -= 1.0
-            cls_index = class_names.index(cls)
-            if cls_index < NUM_CLASSES:
-                instances.append(
-                    {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
-                )
+            #breakpoint()
+            if cls in class_names:
+                cls_index = class_names.index(cls)
+                if cls_index < NUM_CLASSES:
+                    instances.append(
+                        {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
+                    )
+            else:
+                total_unknown += 1
         r["annotations"] = instances
         dicts.append(r)
         # returns filename which is the full filepath, image_id which is just a string,
         # image height, width, and bounding box annotations with category id, 4 coordinate bbox, and mode
+    print("total unknown", total_unknown)
     return dicts
 
 
