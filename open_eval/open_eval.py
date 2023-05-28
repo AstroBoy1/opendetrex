@@ -9,11 +9,11 @@ import xml.etree.ElementTree as ET
 from collections import OrderedDict, defaultdict
 from functools import lru_cache
 import torch
-
+import pickle
 from detectron2.data import MetadataCatalog
 from detectron2.utils import comm
 from detectron2.utils.file_io import PathManager
-
+from random import sample
 from detectron2.evaluation.evaluator import DatasetEvaluator
 
 
@@ -96,7 +96,10 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                 self._dataset_name, 2007 if self._is_2007 else 2012
             )
         )
+        PREVIOUS_KNOWN = 20
         NUM_CLASSES = 40
+        SAVE_SCORES = False
+        ret = OrderedDict()
         with tempfile.TemporaryDirectory(prefix="pascal_voc_eval_") as dirname:
             res_file_template = os.path.join(dirname, "{}.txt")
 
@@ -109,10 +112,11 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                 #pickle.dump(predictions, f)
             for cls_id, cls_name in enumerate(self._class_names[:NUM_CLASSES]):
                 lines = predictions.get(cls_id, [""])
-
                 with open(res_file_template.format(cls_name), "w") as f:
                     f.write("\n".join(lines))
-
+                if SAVE_SCORES:
+                    save_class_scores(predictions)
+                    return 1
                 #for thresh in range(50, 55, 5):
                 for thresh in range(50, 100, 5):
                     # thresholds 50, 55, ...95
@@ -126,8 +130,12 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         use_07_metric=self._is_2007,
                     )
                     aps[thresh].append(ap * 100)
-
-        ret = OrderedDict()
+                if cls_id == PREVIOUS_KNOWN - 1:
+                    map_prev = {iou: np.mean(x) for iou, x in aps.items()}
+                    ret["bbox_prev"] = {"AP": np.mean(list(map_prev.values())),
+                                        "AP50": map_prev[50], "AP75": map_prev[75]}
+        map_current = np.mean(aps[50][PREVIOUS_KNOWN:])
+        ret["bbox_current"] = {"AP50": map_current}
         mAP = {iou: np.mean(x) for iou, x in aps.items()}
         ret["bbox"] = {"AP": np.mean(list(mAP.values())), "AP50": mAP[50], "AP75": mAP[75]}
         return ret
@@ -144,6 +152,20 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
 # --------------------------------------------------------
 
 """Python implementation of the PASCAL VOC devkit's AP evaluation code."""
+
+
+def save_class_scores(predictions):
+    breakpoint()
+    with open('t1_class_ratios.pickle', 'rb') as handle:
+        t1_dictionary = pickle.load(handle)
+    all_files = set()
+    for k, v in t1_dictionary.items():
+        lines = predictions.get(int(k), [""])
+        splitlines = [x.strip().split(" ") for x in lines]
+        image_ids = [x[0] for x in splitlines]
+        fine_files = sample(image_ids, int(v))
+        all_files.update(fine_files)
+    return all_files
 
 
 @lru_cache(maxsize=None)

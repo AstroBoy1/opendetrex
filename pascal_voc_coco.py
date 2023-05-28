@@ -84,6 +84,11 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     annotation_dirname = PathManager.get_local_path(os.path.join(dirname, "Annotations/"))
     dicts = []
     total_unknown = 0
+    exemplar_set = set()
+    with open("../PROB/data/VOC2007/ImageSets/Main/owod_t2_train_exemplars_only.txt") as fp:
+        exemplar_files = fp.readlines()
+    for ef in exemplar_files:
+        exemplar_set.add(ef.rstrip())
     for fileid in fileids:
         anno_file = os.path.join(annotation_dirname, fileid + ".xml")
         jpeg_file = os.path.join(dirname, "JPEGImages", fileid + ".jpg")
@@ -99,6 +104,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
         }
         instances = []
         NUM_CLASSES = 40
+        PREV_KNOWN = 20
         for obj in tree.findall("object"):
             cls = obj.find("name").text
             # In the towod dataset creation, voc labels were converted to coco
@@ -124,11 +130,14 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             if cls in class_names:
                 cls_index = class_names.index(cls)
                 if cls_index < NUM_CLASSES:
-                    instances.append(
-                        {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
-                    )
-            else:
-                total_unknown += 1
+                    # if cls_index < PREV_KNOWN and fileid in exemplar_set:
+                    #     print("exemplar file")
+                    if cls_index >= PREV_KNOWN or (cls_index < PREV_KNOWN and fileid in exemplar_set):
+                        instances.append(
+                            {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
+                        )
+            # else:
+            #     total_unknown += 1
         r["annotations"] = instances
         dicts.append(r)
         # returns filename which is the full filepath, image_id which is just a string,
