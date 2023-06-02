@@ -18,8 +18,9 @@ model.position_embedding.offset = 0.0
 #train.init_checkpoint = "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
 #train.init_checkpoint = "./output/t1_known_90+29999/model_0029999.pth"
 #train.init_checkpoint = "./output/t2/80_known/model_final.pth"
-train.init_checkpoint="./output/t1/80_known/model_0064999.pth"
-train.output_dir = "./output/t2/known_finetune_correct"
+train.init_checkpoint = "./output/t1/80_known/model_0064999.pth"
+#train.init_checkpoint = "./output/t2/known_finetune_correct/model_0064999.pth"
+train.output_dir = "./output/t2/train_andexemplars"
 
 # max training iterations
 train.max_iter = 90000
@@ -52,8 +53,8 @@ model.num_classes = 80
 model.num_queries = 100
 
 # modify optimizer config
-optimizer.lr = 1e-4
-#optimizer.lr = 1e-5
+#optimizer.lr = 1e-4
+optimizer.lr = 1e-5
 optimizer.betas = (0.9, 0.999)
 optimizer.weight_decay = 1e-4
 optimizer.params.lr_factor_func = lambda module_name: 0.1 if "backbone" in module_name else 1

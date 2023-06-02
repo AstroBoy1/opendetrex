@@ -85,7 +85,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     dicts = []
     total_unknown = 0
     exemplar_set = set()
-    with open("../PROB/data/VOC2007/ImageSets/Main/owod_t2_train_exemplars_only.txt") as fp:
+    with open("../PROB/data/VOC2007/ImageSets/Main/owod_t2_ft.txt") as fp:
         exemplar_files = fp.readlines()
     for ef in exemplar_files:
         exemplar_set.add(ef.rstrip())
@@ -104,7 +104,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
         }
         instances = []
         NUM_CLASSES = 40
-        PREV_KNOWN = 20
+        PREV_KNOWN = 0
         for obj in tree.findall("object"):
             cls = obj.find("name").text
             # In the towod dataset creation, voc labels were converted to coco

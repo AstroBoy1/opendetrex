@@ -15,6 +15,7 @@ from detectron2.utils import comm
 from detectron2.utils.file_io import PathManager
 from random import sample
 from detectron2.evaluation.evaluator import DatasetEvaluator
+import pickle
 
 
 class PascalVOCDetectionEvaluator(DatasetEvaluator):
@@ -168,6 +169,62 @@ def save_class_scores(predictions):
     return all_files
 
 
+def nms(bounding_boxes, confidence_score, threshold):
+    # If no bounding boxes, return empty list
+    if len(bounding_boxes) == 0:
+        return [], []
+
+    # Bounding boxes
+    boxes = np.array(bounding_boxes)
+
+    # coordinates of bounding boxes
+    start_x = boxes[:, 0]
+    start_y = boxes[:, 1]
+    end_x = boxes[:, 2]
+    end_y = boxes[:, 3]
+
+    # Confidence scores of bounding boxes
+    score = np.array(confidence_score)
+
+    # Picked bounding boxes
+    picked_boxes = []
+    picked_score = []
+
+    # Compute areas of bounding boxes
+    areas = (end_x - start_x + 1) * (end_y - start_y + 1)
+
+    # Sort by confidence score of bounding boxes
+    order = np.argsort(score)
+
+    # Iterate bounding boxes
+    while order.size > 0:
+        # The index of largest confidence score
+        index = order[-1]
+
+        # Pick the bounding box with largest confidence score
+        picked_boxes.append(bounding_boxes[index])
+        picked_score.append(confidence_score[index])
+
+        # Compute ordinates of intersection-over-union(IOU)
+        x1 = np.maximum(start_x[index], start_x[order[:-1]])
+        x2 = np.minimum(end_x[index], end_x[order[:-1]])
+        y1 = np.maximum(start_y[index], start_y[order[:-1]])
+        y2 = np.minimum(end_y[index], end_y[order[:-1]])
+
+        # Compute areas of intersection-over-union
+        w = np.maximum(0.0, x2 - x1 + 1)
+        h = np.maximum(0.0, y2 - y1 + 1)
+        intersection = w * h
+
+        # Compute the ratio between intersection and union
+        ratio = intersection / (areas[index] + areas[order[:-1]] - intersection)
+
+        left = np.where(ratio < threshold)
+        order = order[left]
+
+    return picked_boxes, picked_score
+
+
 @lru_cache(maxsize=None)
 def parse_rec(filename):
     """Parse a PASCAL VOC xml file."""
@@ -297,8 +354,13 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     #breakpoint()
     tp = np.zeros(nd)
     fp = np.zeros(nd)
-    #print("classname:", classname)
-    #breakpoint()
+
+    PSEUDO_KNOWNS = False
+    # For each image id key, value is a list of bounding boxes
+    image_id_boxes = defaultdict(list)
+    image_id_scores = defaultdict(list)
+    class_scores = []
+
     for d in range(nd):
         R = class_recs[image_ids[d]]
         bb = BB[d, :].astype(float)
@@ -326,7 +388,6 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
                 + (BBGT[:, 2] - BBGT[:, 0] + 1.0) * (BBGT[:, 3] - BBGT[:, 1] + 1.0)
                 - inters
             )
-
             overlaps = inters / uni
             ovmax = np.max(overlaps)
             jmax = np.argmax(overlaps)
@@ -334,23 +395,37 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
             if not R["difficult"][jmax]:
                 if not R["det"][jmax]:
                     tp[d] = 1.0
+                    class_scores.append(sorted_conf[d])
                     R["det"][jmax] = 1
                 else:
                     fp[d] = 1.0
         else:
             fp[d] = 1.0
-
+        if PSEUDO_KNOWNS:
+            image_id_boxes[image_ids[d]].append(bb)
+            image_id_scores[image_ids[d]].append(sorted_conf[d])
+    if PSEUDO_KNOWNS:
+        image_ids_nms_boxes = {}
+        image_ids_nms_scores = {}
+        for key in image_id_boxes.keys():
+            bounding_boxes = image_id_boxes[key]
+            confidence_score = np.array(image_id_scores[key])
+            picked_boxes, picked_score = nms(bounding_boxes, confidence_score, threshold=ovthresh)
+            image_ids_nms_boxes[key] = picked_boxes
+            image_ids_nms_scores[key] = picked_score
+        #breakpoint()
+        with open("pseudolabels/t2/known/boxes_" + str(classname) + ".pickle", 'wb') as handle:
+            pickle.dump(image_ids_nms_boxes, handle)
+        with open("pseudolabels/t2/known/scores_" + str(classname) + ".pickle", 'wb') as handle:
+            pickle.dump(image_ids_nms_scores, handle)
+        with open("pseudolabels/t2/known/tpscores_" + str(classname) + ".pickle", 'wb') as handle:
+            pickle.dump(class_scores, handle)
     # compute precision recall
     fp = np.cumsum(fp)
     tp = np.cumsum(tp)
     rec = tp / float(npos)
-    #print(classname)
-    #print("fp", fp)
-    #print("tp", tp)
     # avoid divide by zero in case the first detection matches a difficult
     # ground truth
     prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
     ap = voc_ap(rec, prec, use_07_metric)
-    #print("recall", "precision", "ap", rec, prec, ap)
-    #breakpoint()
     return rec, prec, ap
