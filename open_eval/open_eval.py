@@ -16,6 +16,7 @@ from detectron2.utils.file_io import PathManager
 from random import sample
 from detectron2.evaluation.evaluator import DatasetEvaluator
 import pickle
+import pandas as pd
 
 
 class PascalVOCDetectionEvaluator(DatasetEvaluator):
@@ -55,6 +56,12 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         self._is_2007 = meta.year == 2007
         self._cpu_device = torch.device("cpu")
         self._logger = logging.getLogger(__name__)
+
+        # For calculating F1 threshold for incremental pseudolabels
+        self.df = pd.DataFrame()
+        self.df_classes = []
+        self.df_probs = []
+        self.df_tp = []
 
     def reset(self):
         self._predictions = defaultdict(list)  # class name -> list of prediction strings
@@ -97,10 +104,13 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                 self._dataset_name, 2007 if self._is_2007 else 2012
             )
         )
-        PREVIOUS_KNOWN = 20
-        NUM_CLASSES = 40
+        PREVIOUS_KNOWN = 0
+        NUM_CLASSES = 20
         SAVE_SCORES = False
         ret = OrderedDict()
+        # For saving probabilities for tp/fp for each class as a dataframe
+        SAVE_ALL_SCORES = True
+        UPPER_THRESH = 55
         with tempfile.TemporaryDirectory(prefix="pascal_voc_eval_") as dirname:
             res_file_template = os.path.join(dirname, "{}.txt")
 
@@ -119,7 +129,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                     save_class_scores(predictions)
                     return 1
                 #for thresh in range(50, 55, 5):
-                for thresh in range(50, 100, 5):
+                for thresh in range(50, UPPER_THRESH, 5):
                     # thresholds 50, 55, ...95
                     #print("evaluating at threshold", thresh)
                     rec, prec, ap = voc_eval(
@@ -128,13 +138,22 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         self._image_set_path,
                         cls_name,
                         ovthresh=thresh / 100.0,
-                        use_07_metric=self._is_2007,
+                        use_07_metric=self._is_2007, df_classes=self.df_classes,
+                        df_probs=self.df_probs,
+                        df_tp=self.df_tp,
+                        df_save=SAVE_ALL_SCORES,
                     )
                     aps[thresh].append(ap * 100)
                 if cls_id == PREVIOUS_KNOWN - 1:
                     map_prev = {iou: np.mean(x) for iou, x in aps.items()}
                     ret["bbox_prev"] = {"AP": np.mean(list(map_prev.values())),
                                         "AP50": map_prev[50], "AP75": map_prev[75]}
+        if SAVE_ALL_SCORES:
+            self.df["classes"] = self.df_classes
+            self.df["probs"] = self.df_probs
+            self.df["tp"] = self.df_tp
+            self.df.to_csv("t1_tpfp_scores.csv")
+            return ret
         map_current = np.mean(aps[50][PREVIOUS_KNOWN:])
         ret["bbox_current"] = {"AP50": map_current}
         mAP = {iou: np.mean(x) for iou, x in aps.items()}
@@ -282,7 +301,8 @@ def voc_ap(rec, prec, use_07_metric=False):
     return ap
 
 
-def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_metric=False):
+def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_metric=False, df_classes=None,
+             df_probs=None, df_tp=None, df_save=False):
     """rec, prec, ap = voc_eval(detpath,
                                 annopath,
                                 imagesetfile,
@@ -396,10 +416,23 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
                 if not R["det"][jmax]:
                     tp[d] = 1.0
                     class_scores.append(sorted_conf[d])
+                    if df_save:
+                        df_tp.append(True)
+                        df_probs.append(sorted_conf[d])
+                        df_classes.append(classname)
                     R["det"][jmax] = 1
                 else:
+                    class_scores.append(sorted_conf[d])
+                    if df_save:
+                        df_tp.append(False)
+                        df_probs.append(sorted_conf[d])
+                        df_classes.append(classname)
                     fp[d] = 1.0
         else:
+            if df_save:
+                df_tp.append(False)
+                df_probs.append(sorted_conf[d])
+                df_classes.append(classname)
             fp[d] = 1.0
         if PSEUDO_KNOWNS:
             image_id_boxes[image_ids[d]].append(bb)
