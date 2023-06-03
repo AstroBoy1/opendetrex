@@ -11,13 +11,13 @@ train = get_config("common/train.py").train
 # modify training config
 #train.init_checkpoint = "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
 #train.init_checkpoint = "./output/dino_agnostic_edges/model_0084999.pth"
-train.output_dir = "./output/gpu_edges_scratch"
+train.output_dir = "./output/t1/unknown_scratch"
 
 # max training iterations, batch size of 4, 16,551 examples
 # 16551 / 4 = 4137.75 iterations per epoch
 # 90000 / 4137.75 = 21 epochs
-#train.max_iter = 90000
-train.max_iter = 180000
+train.max_iter = 90000
+#train.max_iter = 180000
 
 # fast debug train.max_iter=20, train.eval_period=10, train.log_period=1
 train.fast_dev_run.enabled = False
@@ -60,7 +60,7 @@ model.dn_number = 1
 #model.num_queries = 100
 
 # modify optimizer config
-optimizer.lr = 1e-4
+optimizer.lr = 1e-5
 optimizer.betas = (0.9, 0.999)
 optimizer.weight_decay = 1e-4
 optimizer.params.lr_factor_func = lambda module_name: 0.1 if "backbone" in module_name else 1
