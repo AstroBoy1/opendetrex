@@ -99,12 +99,15 @@ def fscore(thresh, df_view, num_positive=10000):
     precision = len(total.loc[total["tp"] == True]) / len(total)
     recall = len(total.loc[total["tp"] == True]) / num_positive
     #print(precision, recall)
-    return (precision * recall) / (precision + recall)
+    return precision, recall, (precision * recall) / (precision + recall)
 
 
 def main():
     thresholds = [x / 10 for x in range(10)]
     df = pd.read_csv("t1_tpfp_scores.csv")
+    class_threshold_df = pd.DataFrame()
+    class_list = []
+    thresh_list = []
     cc, num_files, class_files = load_voc_instances(dirname="/nfs/hpc/share/omorim/projects/PROB/data/VOC2007", split="train",
                                                     class_names=VOC_COCO_CLASS_NAMES["TOWOD"])
     for class_name in set(df.classes.values):
@@ -112,13 +115,25 @@ def main():
         df_view = df.loc[df["classes"] == class_name]
         best_thresh = thresholds[1]
         best_score = 0
+        best_prec = 0
+        best_rec = 0
         for thresh in thresholds[1:]:
-            score = fscore(thresh, df_view, cc[str(index)])
+            prec, rec, score = fscore(thresh, df_view, cc[str(index)])
             #print(score)
             if score >= best_score:
                 best_score = score
+                best_prec = prec
+                best_rec = rec
                 best_thresh = thresh
         print("{} best thresh {}".format(class_name, best_thresh))
+        print("num instances {}".format(cc[str(index)]))
+        print("precision", best_prec, "recall", best_rec)
+        class_list.append(class_name)
+        thresh_list.append(best_thresh)
+    class_threshold_df["class"] = class_list
+    class_threshold_df["threshold"] = thresh_list
+    print(class_threshold_df)
+    class_threshold_df.to_csv("t1_known_class_f1_thresholds.csv")
     return 1
 
 

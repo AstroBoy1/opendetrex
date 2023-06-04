@@ -109,7 +109,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         SAVE_SCORES = False
         ret = OrderedDict()
         # For saving probabilities for tp/fp for each class as a dataframe
-        SAVE_ALL_SCORES = True
+        SAVE_ALL_SCORES = False
         UPPER_THRESH = 55
         with tempfile.TemporaryDirectory(prefix="pascal_voc_eval_") as dirname:
             res_file_template = os.path.join(dirname, "{}.txt")
@@ -375,11 +375,14 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     tp = np.zeros(nd)
     fp = np.zeros(nd)
 
-    PSEUDO_KNOWNS = False
+    PSEUDO_KNOWNS = True
     # For each image id key, value is a list of bounding boxes
     image_id_boxes = defaultdict(list)
     image_id_scores = defaultdict(list)
     class_scores = []
+    class_thresholds_df = pd.read_csv("t1_known_class_f1_thresholds.csv")
+    #breakpoint()
+    class_threshold = class_thresholds_df.loc[class_thresholds_df["class"] == classname]["threshold"].values
 
     for d in range(nd):
         R = class_recs[image_ids[d]]
@@ -415,14 +418,14 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
             if not R["difficult"][jmax]:
                 if not R["det"][jmax]:
                     tp[d] = 1.0
-                    class_scores.append(sorted_conf[d])
+                    #class_scores.append(sorted_conf[d])
                     if df_save:
                         df_tp.append(True)
                         df_probs.append(sorted_conf[d])
                         df_classes.append(classname)
                     R["det"][jmax] = 1
                 else:
-                    class_scores.append(sorted_conf[d])
+                    #class_scores.append(sorted_conf[d])
                     if df_save:
                         df_tp.append(False)
                         df_probs.append(sorted_conf[d])
@@ -435,8 +438,9 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
                 df_classes.append(classname)
             fp[d] = 1.0
         if PSEUDO_KNOWNS:
-            image_id_boxes[image_ids[d]].append(bb)
-            image_id_scores[image_ids[d]].append(sorted_conf[d])
+            if sorted_conf[d] >= class_threshold:
+                image_id_boxes[image_ids[d]].append(bb)
+                image_id_scores[image_ids[d]].append(sorted_conf[d])
     if PSEUDO_KNOWNS:
         image_ids_nms_boxes = {}
         image_ids_nms_scores = {}
@@ -447,12 +451,13 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
             image_ids_nms_boxes[key] = picked_boxes
             image_ids_nms_scores[key] = picked_score
         #breakpoint()
-        with open("pseudolabels/t2/known/boxes_" + str(classname) + ".pickle", 'wb') as handle:
+        with open("pseudolabels/t2/known_f1/boxes_" + str(classname) + ".pickle", 'wb') as handle:
             pickle.dump(image_ids_nms_boxes, handle)
-        with open("pseudolabels/t2/known/scores_" + str(classname) + ".pickle", 'wb') as handle:
+        with open("pseudolabels/t2/known_f1/scores_" + str(classname) + ".pickle", 'wb') as handle:
             pickle.dump(image_ids_nms_scores, handle)
-        with open("pseudolabels/t2/known/tpscores_" + str(classname) + ".pickle", 'wb') as handle:
-            pickle.dump(class_scores, handle)
+        print(classname, npos, len(image_ids_nms_boxes))
+        # with open("pseudolabels/t2/known/tpscores_" + str(classname) + ".pickle", 'wb') as handle:
+        #     pickle.dump(class_scores, handle)
     # compute precision recall
     fp = np.cumsum(fp)
     tp = np.cumsum(tp)
