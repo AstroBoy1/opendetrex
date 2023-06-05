@@ -9,7 +9,7 @@ from typing import List, Tuple, Union
 from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.structures import BoxMode
 from detectron2.utils.file_io import PathManager
-
+import pickle
 import itertools
 
 __all__ = ["load_voc_instances", "register_pascal_voc"]
@@ -89,6 +89,10 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
         exemplar_files = fp.readlines()
     for ef in exemplar_files:
         exemplar_set.add(ef.rstrip())
+    with open("pseudo_files_set.pickle", "rb") as fp:
+        pseudo_file_set = pickle.load(fp)
+    #breakpoint()
+    #count = 0
     for fileid in fileids:
         anno_file = os.path.join(annotation_dirname, fileid + ".xml")
         jpeg_file = os.path.join(dirname, "JPEGImages", fileid + ".jpg")
@@ -104,7 +108,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
         }
         instances = []
         NUM_CLASSES = 40
-        PREV_KNOWN = 0
+        PREV_KNOWN = 20
         for obj in tree.findall("object"):
             cls = obj.find("name").text
             # In the towod dataset creation, voc labels were converted to coco
@@ -132,17 +136,22 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
                 if cls_index < NUM_CLASSES:
                     # if cls_index < PREV_KNOWN and fileid in exemplar_set:
                     #     print("exemplar file")
-                    if cls_index >= PREV_KNOWN or (cls_index < PREV_KNOWN and fileid in exemplar_set):
+                    # if fileid in pseudo_file_set:
+                    #     count += 1
+                    if cls_index >= PREV_KNOWN or (cls_index < PREV_KNOWN and fileid in pseudo_file_set):
                         instances.append(
                             {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
                         )
             # else:
             #     total_unknown += 1
+        #print(count)
         r["annotations"] = instances
         dicts.append(r)
         # returns filename which is the full filepath, image_id which is just a string,
         # image height, width, and bounding box annotations with category id, 4 coordinate bbox, and mode
-    print("total unknown", total_unknown)
+    #print("count", count)
+    #print("total unknown", total_unknown)
+    #breakpoint()
     return dicts
 
 
