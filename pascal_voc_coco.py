@@ -107,8 +107,8 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             "width": int(tree.findall("./size/width")[0].text),
         }
         instances = []
-        NUM_CLASSES = 40
-        PREV_KNOWN = 20
+        NUM_CLASSES = 20
+        PREV_KNOWN = 0
         for obj in tree.findall("object"):
             cls = obj.find("name").text
             # In the towod dataset creation, voc labels were converted to coco

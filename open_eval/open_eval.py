@@ -104,13 +104,13 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                 self._dataset_name, 2007 if self._is_2007 else 2012
             )
         )
-        PREVIOUS_KNOWN = 20
-        NUM_CLASSES = 40
+        PREVIOUS_KNOWN = 0
+        NUM_CLASSES = 20
         SAVE_SCORES = False
         ret = OrderedDict()
         # For saving probabilities for tp/fp for each class as a dataframe
         SAVE_ALL_SCORES = False
-        UPPER_THRESH = 100
+        UPPER_THRESH = 55
         with tempfile.TemporaryDirectory(prefix="pascal_voc_eval_") as dirname:
             res_file_template = os.path.join(dirname, "{}.txt")
 
@@ -375,7 +375,7 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     tp = np.zeros(nd)
     fp = np.zeros(nd)
 
-    PSEUDO_KNOWNS = False
+    PSEUDO_KNOWNS = True
     # For each image id key, value is a list of bounding boxes
     image_id_boxes = defaultdict(list)
     image_id_scores = defaultdict(list)
@@ -438,6 +438,7 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
                 df_classes.append(classname)
             fp[d] = 1.0
         if PSEUDO_KNOWNS:
+            class_threshold = 0.5
             if sorted_conf[d] >= class_threshold:
                 image_id_boxes[image_ids[d]].append(bb)
                 image_id_scores[image_ids[d]].append(sorted_conf[d])
@@ -451,13 +452,14 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
             image_ids_nms_boxes[key] = picked_boxes
             image_ids_nms_scores[key] = picked_score
         #breakpoint()
-        with open("pseudolabels/t2/known_f1/boxes_" + str(classname) + ".pickle", 'wb') as handle:
+        with open("pseudolabels/t2/known_50/boxes_" + str(classname) + ".pickle", 'wb') as handle:
             pickle.dump(image_ids_nms_boxes, handle)
-        with open("pseudolabels/t2/known_f1/scores_" + str(classname) + ".pickle", 'wb') as handle:
+        with open("pseudolabels/t2/known_50/scores_" + str(classname) + ".pickle", 'wb') as handle:
             pickle.dump(image_ids_nms_scores, handle)
         print(classname, npos, len(image_ids_nms_boxes))
         # with open("pseudolabels/t2/known/tpscores_" + str(classname) + ".pickle", 'wb') as handle:
         #     pickle.dump(class_scores, handle)
+        print("saved pseudo knowns")
     # compute precision recall
     fp = np.cumsum(fp)
     tp = np.cumsum(tp)

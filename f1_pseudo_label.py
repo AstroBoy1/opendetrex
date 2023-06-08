@@ -27,10 +27,10 @@ def main():
                 image_box_hash[k].append(v[0])
                 image_class_hash[k].append(class_name)
     keys = set(image_box_hash.keys())
-    with open("pseudo_files_set.pickle", "wb") as fp:
-        pickle.dump(keys, fp)
-    breakpoint()
-    return
+    # with open("pseudo_files_set.pickle", "wb") as fp:
+    #     pickle.dump(keys, fp)
+    # breakpoint()
+    # return
     for count, image_id in enumerate(image_box_hash.keys()):
         if count % 1000 == 0:
             print(count)
