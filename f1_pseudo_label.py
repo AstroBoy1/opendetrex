@@ -21,7 +21,7 @@ def main():
     image_box_hash = defaultdict(list)
     image_class_hash = defaultdict(list)
     for class_name in t1_classes:
-        with open("pseudolabels/t2/known_f1/boxes_{}.pickle".format(class_name), "rb") as fp:
+        with open("pseudolabels/t2/known_50/boxes_{}.pickle".format(class_name), "rb") as fp:
             box_hash = pickle.load(fp)
             for k, v in box_hash.items():
                 image_box_hash[k].append(v[0])

@@ -110,7 +110,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         ret = OrderedDict()
         # For saving probabilities for tp/fp for each class as a dataframe
         SAVE_ALL_SCORES = False
-        UPPER_THRESH = 55
+        UPPER_THRESH = 100
         with tempfile.TemporaryDirectory(prefix="pascal_voc_eval_") as dirname:
             res_file_template = os.path.join(dirname, "{}.txt")
 
@@ -375,7 +375,7 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     tp = np.zeros(nd)
     fp = np.zeros(nd)
 
-    PSEUDO_KNOWNS = True
+    PSEUDO_KNOWNS = False
     # For each image id key, value is a list of bounding boxes
     image_id_boxes = defaultdict(list)
     image_id_scores = defaultdict(list)
