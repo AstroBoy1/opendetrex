@@ -130,7 +130,8 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         use_07_metric=self._is_2007,
                     )
                     #return
-                    aps[thresh].append(ap * 100)
+                    #aps[thresh].append(ap * 100)
+                    aps[thresh].append(ap)
                     print("recall", rec[-1])
                     if thresh == 50 and cls_id == 0:
                         recs[50] = rec[-1]

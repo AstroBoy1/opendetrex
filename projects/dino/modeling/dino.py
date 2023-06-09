@@ -504,7 +504,7 @@ class DINO(nn.Module):
         return outputs_class, outputs_coord
 
 
-    def preprocess_image(self, batched_inputs):
+    def preprocess_image(self, batched_inputs, edges_only=True):
         """GPU Gaussian followed by Sobel"""
         # # [Batch size, num_channels, height, width]
         # t.is_cuda
@@ -534,7 +534,10 @@ class DINO(nn.Module):
             x_v = F.conv2d(smooth_img, kernel_v, padding='same')
             x_h = F.conv2d(smooth_img, kernel_h, padding='same')
             edge_im = torch.sqrt(torch.pow(x_v, 2) + torch.pow(x_h, 2) + 1e-6)
-            images[index] = torch.cat([images[index], edge_im], dim=0)
+            if edges_only:
+                images[index] = edge_im
+            else:
+                images[index] = torch.cat([images[index], edge_im], dim=0)
         images = ImageList.from_tensors(images)
         #end = time.time()
         #print(end - start)
