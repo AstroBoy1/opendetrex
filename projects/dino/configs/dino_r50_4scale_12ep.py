@@ -11,7 +11,7 @@ train = get_config("common/train.py").train
 # modify training config
 #train.init_checkpoint = "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
 #train.init_checkpoint = "./output/dino_agnostic_edges/model_0084999.pth"
-train.output_dir = "./output/t1/unknown_scratch_edges"
+train.output_dir = "./output/t1/unknown_scratch_rgb"
 
 # modify model config
 # use the original implementation of dab-detr position embedding in 24 epochs training.
@@ -53,7 +53,7 @@ model.num_classes = 2
 
 # Frequency channel
 #model.backbone.stem.in_channels = 4
-model.backbone.stem.in_channels = 1
+model.backbone.stem.in_channels = 3 
 
 # dropout parameters
 model.transformer.encoder.attn_dropout = 0.1

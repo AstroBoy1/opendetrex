@@ -504,14 +504,17 @@ class DINO(nn.Module):
         return outputs_class, outputs_coord
 
 
-    def preprocess_image(self, batched_inputs, edges_only=True):
+    def preprocess_image(self, batched_inputs, edges_only=True, gray_only=True):
         """GPU Gaussian followed by Sobel"""
         # # [Batch size, num_channels, height, width]
         # t.is_cuda
         #breakpoint()
         #import time
         #start = time.time()
+        rgb_only = True
         images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
+        if rgb_only:
+            return ImageList.from_tensors(images)
         kernel_v = [[1, 0, -1],
                     [2, 0, -2],
                     [1, 0, -1]]
@@ -529,6 +532,9 @@ class DINO(nn.Module):
         gaussian_kernel = torch.FloatTensor([[x / 273 for x in y] for y in gaussian_kernel]).unsqueeze(0).unsqueeze(0).to(self.device)
         for index, im in enumerate(images):
             gray_im = transforms.Grayscale()(im)
+            if gray_only:
+                images[index] = gray_im
+                continue
             #img = GaussianBlur(kernel_size=3, sigma=(0.1, 2.0))(gray_im)
             smooth_img = F.conv2d(gray_im, gaussian_kernel, padding='same')
             x_v = F.conv2d(smooth_img, kernel_v, padding='same')
