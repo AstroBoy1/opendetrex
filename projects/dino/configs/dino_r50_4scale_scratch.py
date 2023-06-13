@@ -20,11 +20,11 @@ model.position_embedding.offset = 0.0
 #train.init_checkpoint = "./output/t2/80_known/model_final.pth"
 #train.init_checkpoint = "./output/t1/80_known/model_0064999.pth"
 #train.init_checkpoint = "./output/t2/known_finetune_correct/model_0064999.pth"
-train.init_checkpoint = "./output/t1/known_scratch_ft2/model_0044999.pth"
-train.output_dir = "./output/t1/known_scratch_ft3"
+train.init_checkpoint = "./output/t1/known_scratch_ft4/model_0069999.pth"
+train.output_dir = "./output/t1//known/known_scratch_ft5"
 
 # max training iterations
-train.max_iter = 190000
+train.max_iter = 1900000
 train.amp = dict(enabled=True)
 
 # fast debug train.max_iter=20, train.eval_period=10, train.log_period=1
@@ -55,7 +55,7 @@ model.num_queries = 100
 
 # modify optimizer config
 #optimizer.lr = 1e-4
-optimizer.lr = 1e-5
+optimizer.lr = 1e-6
 optimizer.betas = (0.9, 0.999)
 optimizer.weight_decay = 1e-4
 optimizer.params.lr_factor_func = lambda module_name: 0.1 if "backbone" in module_name else 1
