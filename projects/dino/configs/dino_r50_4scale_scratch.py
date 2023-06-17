@@ -20,8 +20,8 @@ model.position_embedding.offset = 0.0
 #train.init_checkpoint = "./output/t2/80_known/model_final.pth"
 #train.init_checkpoint = "./output/t1/80_known/model_0064999.pth"
 #train.init_checkpoint = "./output/t2/known_finetune_correct/model_0064999.pth"
-train.init_checkpoint = "./output/t1/known/known_scratch_ft5/model_0074999.pth"
-train.output_dir = "./output/t1//known/known_scratch_ft6"
+train.init_checkpoint = "./output/t1/known/known_scratch_ft6/model_0149999.pth"
+train.output_dir = "./output/t1//known/known_scratch_ft7"
 
 # max training iterations
 train.max_iter = 1900000
