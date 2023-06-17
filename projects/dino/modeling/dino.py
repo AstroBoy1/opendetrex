@@ -511,8 +511,12 @@ class DINO(nn.Module):
         #breakpoint()
         #import time
         #start = time.time()
-        rgb_only = True
-        images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
+        rgb_only = False
+        bilateral = True
+        if not bilateral:
+            images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
+        elif bilateral:
+                images = [x["image"] for x in batched_inputs]
         if rgb_only:
             return ImageList.from_tensors(images)
         kernel_v = [[1, 0, -1],
@@ -531,6 +535,18 @@ class DINO(nn.Module):
                            [1, 4, 7, 4, 1]]
         gaussian_kernel = torch.FloatTensor([[x / 273 for x in y] for y in gaussian_kernel]).unsqueeze(0).unsqueeze(0).to(self.device)
         for index, im in enumerate(images):
+            # https://docs.opencv.org/4.x/d4/d86/group__imgproc__filter.html#ga9d7064d478c95d60003cf839430737ed
+            if bilateral:
+                #breakpoint()
+                #im_tensor = im["image"]
+                if im.device.type != "cpu":
+                    im = im.cpu()
+                cpu_im = np.array(im)
+                cpu_im = cpu_im.reshape(cpu_im.shape[1], cpu_im.shape[2], cpu_im.shape[0])
+                filtered = cv.bilateralFilter(cpu_im, 9, 75, 75)
+                filtered = filtered.reshape(filtered.shape[2], filtered.shape[0], filtered.shape[1])
+                images[index] = self.normalizer(torch.from_numpy(filtered).to(self.device))
+                continue
             gray_im = transforms.Grayscale()(im)
             if gray_only:
                 images[index] = gray_im
