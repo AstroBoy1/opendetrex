@@ -512,8 +512,11 @@ class DINO(nn.Module):
         #import time
         #start = time.time()
         rgb_only = False
-        bilateral = True
-        if not bilateral:
+        bilateral = False
+        fourier = True
+        if fourier:
+            images = [x["image"]for x in batched_inputs]
+        elif not bilateral:
             images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
         elif bilateral:
                 images = [x["image"] for x in batched_inputs]
@@ -546,6 +549,19 @@ class DINO(nn.Module):
                 filtered = cv.bilateralFilter(cpu_im, 9, 75, 75)
                 filtered = filtered.reshape(filtered.shape[2], filtered.shape[0], filtered.shape[1])
                 images[index] = self.normalizer(torch.from_numpy(filtered).to(self.device))
+                continue
+            elif fourier:
+                #breakpoint()
+                im_normalized = self.normalizer(im.to(self.device))
+                fft_norm = abs(np.fft.fftn(im_normalized.cpu(), norm="ortho"))
+                #fftn = torch.fft.fftn(im, norm="forward")
+                #fftn = torch.fft.rfftn(im, norm="forward")
+                #batched_norm = torch.functorch.vmap(torch.norm)
+                #fftn_norm = batched_norm(fftn)
+                #fftn.apply_(lambda x: (torch.norm(x)))
+                #fft_amp = fftn[:, :, :, :, 0] ** 2 + fft_im[:, :, :, :, 1] ** 2
+                #fft_amp = torch.sqrt(fft_amp)  # this is the amplitude
+                images[index] = torch.cat([im_normalized, torch.from_numpy(fft_norm).float().to(self.device)], dim=0)
                 continue
             gray_im = transforms.Grayscale()(im)
             if gray_only:
