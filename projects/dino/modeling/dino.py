@@ -503,40 +503,37 @@ class DINO(nn.Module):
             dn_metas["output_known_lbs_bboxes"] = out
         return outputs_class, outputs_coord
 
-
     def preprocess_image(self, batched_inputs, edges_only=True, gray_only=True):
         """GPU Gaussian followed by Sobel"""
         # # [Batch size, num_channels, height, width]
-        # t.is_cuda
-        #breakpoint()
-        #import time
-        #start = time.time()
-        rgb_only = False
+        rgb_only = True
         bilateral = False
-        fourier = True
-        if fourier:
-            images = [x["image"]for x in batched_inputs]
-        elif not bilateral:
-            images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
-        elif bilateral:
-                images = [x["image"] for x in batched_inputs]
+        fourier = False
+        frequency = False
         if rgb_only:
+            images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
             return ImageList.from_tensors(images)
-        kernel_v = [[1, 0, -1],
-                    [2, 0, -2],
-                    [1, 0, -1]]
-        kernel_h = [[1, 2, 1],
-                    [0, 0, 0],
-                    [-1, -2, -1]]
-        kernel_h = torch.FloatTensor(kernel_h).unsqueeze(0).unsqueeze(0).to(self.device)
-        kernel_v = torch.FloatTensor(kernel_v).unsqueeze(0).unsqueeze(0).to(self.device)
+        elif fourier:
+            images = [x["image"]for x in batched_inputs]
+        elif frequency:
+            images = [x["image"].to(self.device) for x in batched_inputs]
+        elif bilateral:
+            images = [x["image"] for x in batched_inputs]
+        # kernel_v = [[1, 0, -1],
+        #             [2, 0, -2],
+        #             [1, 0, -1]]
+        # kernel_h = [[1, 2, 1],
+        #             [0, 0, 0],
+        #             [-1, -2, -1]]
+        # kernel_h = torch.FloatTensor(kernel_h).unsqueeze(0).unsqueeze(0).to(self.device)
+        # kernel_v = torch.FloatTensor(kernel_v).unsqueeze(0).unsqueeze(0).to(self.device)
         # https://homepages.inf.ed.ac.uk/rbf/HIPR2/gsmooth.htm
-        gaussian_kernel = [[1, 4, 7, 4, 1],
-                           [4, 16, 26, 16, 4],
-                           [7, 26, 41, 26, 7],
-                           [4, 16, 26, 16, 4],
-                           [1, 4, 7, 4, 1]]
-        gaussian_kernel = torch.FloatTensor([[x / 273 for x in y] for y in gaussian_kernel]).unsqueeze(0).unsqueeze(0).to(self.device)
+        # gaussian_kernel = [[1, 4, 7, 4, 1],
+        #                    [4, 16, 26, 16, 4],
+        #                    [7, 26, 41, 26, 7],
+        #                    [4, 16, 26, 16, 4],
+        #                    [1, 4, 7, 4, 1]]
+        # gaussian_kernel = torch.FloatTensor([[x / 273 for x in y] for y in gaussian_kernel]).unsqueeze(0).unsqueeze(0).to(self.device)
         for index, im in enumerate(images):
             # https://docs.opencv.org/4.x/d4/d86/group__imgproc__filter.html#ga9d7064d478c95d60003cf839430737ed
             if bilateral:
@@ -549,6 +546,14 @@ class DINO(nn.Module):
                 filtered = cv.bilateralFilter(cpu_im, 9, 75, 75)
                 filtered = filtered.reshape(filtered.shape[2], filtered.shape[0], filtered.shape[1])
                 images[index] = self.normalizer(torch.from_numpy(filtered).to(self.device))
+                continue
+            elif frequency:
+                #breakpoint()
+                gray_im = transforms.Grayscale()(im).float()
+                smooth_img = F.conv2d(gray_im, gaussian_kernel, padding='same')
+                high_frequency = torch.sub(gray_im, smooth_img).to(self.device)
+                normalized_image = self.normalizer(im.to(self.device))
+                images[index] = torch.cat([normalized_image, high_frequency], dim=0)
                 continue
             elif fourier:
                 #breakpoint()
@@ -577,9 +582,6 @@ class DINO(nn.Module):
             else:
                 images[index] = torch.cat([images[index], edge_im], dim=0)
         images = ImageList.from_tensors(images)
-        #end = time.time()
-        #print(end - start)
-        #breakpoint()
         return images
 
 
