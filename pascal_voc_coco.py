@@ -77,12 +77,23 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
         split (str): one of "train", "test", "val", "trainval"
         class_names: list or tuple of class names
     """
+    UNKNOWN = False
+    NUM_CLASSES = 40
+    PREV_KNOWN = 20
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:
         fileids = np.loadtxt(f, dtype=np.str)
     # fileids is a string
     # Needs to read many small annotation files. Makes sense at local
     annotation_dirname = PathManager.get_local_path(os.path.join(dirname, "Annotations/"))
     dicts = []
+    exemplar_set = set()
+    # with open("../PROB/data/VOC2007/ImageSets/Main/owod_t2_ft.txt") as fp:
+    #     exemplar_files = fp.readlines()
+    # for ef in exemplar_files:
+    #     exemplar_set.add(ef.rstrip())
+    pseudo_file_set = set()
+    # with open("pseudo_files_set.pickle", "rb") as fp:
+    #     pseudo_file_set = pickle.load(fp)
     for fileid in fileids:
         anno_file = os.path.join(annotation_dirname, fileid + ".xml")
         jpeg_file = os.path.join(dirname, "JPEGImages", fileid + ".jpg")
@@ -119,14 +130,25 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             bbox[1] -= 1.0
             cid = class_names.index(cls)
             # 1 for unknown
-            if cid >= 20:
-                cid = 1
-            # 0 for known
+            if UNKNOWN:
+                if cid >= NUM_CLASSES:
+                    cid = 1
+                # 0 for known
+                else:
+                    cid = 0
+                instances.append(
+                    {"category_id": cid, "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
+                )
             else:
-                cid = 0
-            instances.append(
-                {"category_id": cid, "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
-            )
+                if cid < NUM_CLASSES:
+                    # if cls_index < PREV_KNOWN and fileid in exemplar_set:
+                    #     print("exemplar file")
+                    # if fileid in pseudo_file_set:
+                    #     count += 1
+                    if cid >= PREV_KNOWN or (cid < PREV_KNOWN and fileid in pseudo_file_set):
+                        instances.append(
+                            {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
+                        )
         r["annotations"] = instances
         dicts.append(r)
         # returns filename which is the full filepath, image_id which is just a string,
