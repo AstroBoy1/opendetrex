@@ -79,8 +79,9 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     """
     
     UNKNOWN = False
-    NUM_CLASSES = 20
-    PREV_KNOWN = 0
+    NUM_CLASSES = 40
+    PREV_KNOWN = 20
+    EXEMPLAR = False
 
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:
         fileids = np.loadtxt(f, dtype=np.str)
@@ -149,7 +150,10 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
                     # if fileid in pseudo_file_set:
                     #     count += 1
                     if cid >= PREV_KNOWN or (cid < PREV_KNOWN and fileid in pseudo_file_set):
-
+                        instances.append(
+                            {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
+                        )
+                    if EXEMPLAR:
                     #if cid >= PREV_KNOWN or (cid < PREV_KNOWN and fileid in exemplar_set):
                         if cid < PREV_KNOWN and fileid in exemplar_set:
                             exemplar_class_counts[cid] += 1

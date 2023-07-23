@@ -47,6 +47,7 @@ def save_pseudo(image_id, pseudo_boxes, out_dr, class_names):
     root = tree.getroot()
     #print(fn, pseudo_boxes, class_names)
     #breakpoint()
+    # Remove the annotations for previous classes by setting it as unknown
     for object in root.iter('name'):
         if object.text in t1_classes or object.text in VOC_CLASS_NAMES_COCOFIED:
             object.text = "unknown"
