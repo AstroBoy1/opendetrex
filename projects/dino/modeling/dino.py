@@ -33,6 +33,53 @@ import cv2 as cv
 from torchvision import transforms
 from torchvision.transforms import GaussianBlur
 
+from torch.autograd import Variable
+
+
+class EdgeNet(nn.Module):
+
+    # Adaptive Edge Filters
+    def __init__(self):
+        super().__init__()
+        # We keep the middle 0s constant
+        # Init to original Sobel: 1, 2, 1
+        self.device = "cuda"
+        self.weights_x = nn.Parameter(torch.tensor([[0], [1], [0]], requires_grad=True, dtype=torch.half))
+        self.zero_vector = torch.zeros((3, 1), dtype=torch.half)
+        self.weights_y = nn.Parameter(torch.tensor([[0, 1, 0]], requires_grad=True, dtype=torch.half))
+        self.zero_y_vector = torch.zeros((1, 3), dtype=torch.half)
+        #self.initial_weights_x = self.weights_x.detach().clone()
+        self.conv1 = nn.Conv2d(3, 3, 3, dtype=torch.half, device=self.device, padding='same')
+
+    def forward(self, x):
+        # Edge Filter in X direction
+        #breakpoint()
+        # ensure the weights are positive, to get an edge gradient
+        #kernel_x = torch.cat((self.weights_x, self.zero_vector, -self.weights_x), 1)
+        #kernel_x = kernel_x.view(1, 1, 3, 3).repeat(1, 3, 1, 1).to(self.device)
+        #x1 = F.conv2d(x, kernel_x, padding='same')
+        #breakpoint()
+        x1 = self.conv1(x)
+        # Edge Filter in Y direction
+        #kernel_y = torch.cat((self.weights_y, self.zero_y_vector, -self.weights_y), 0)
+        #kernel_y = kernel_y.view(1, 1, 3, 3).repeat(1, 3, 1, 1).to(self.device)
+        #x2 = F.conv2d(x, kernel_y, padding='same')
+
+        # Combine the above 2 channels for more efficient training
+        #edge_mag = torch.sqrt(torch.pow(x1, 2) + torch.pow(x2, 2) + 1e-6)
+        #print("kernel_x", kernel_x)
+        #print("kernel_y", kernel_y)
+        #if not torch.equal(self.weights_x, self.initial_weights_x):
+            #print("initial weights x:", self.initial_weights_x)
+        #breakpoint()
+        #print("current weights x:", self.weights_x)
+            #self.initial_weights_x = self.weights_x.detach().clone()
+        return x1
+        #return edge_mag
+
+
+#edge_net = EdgeNet()
+
 
 class DINO(nn.Module):
     """Implement DAB-Deformable-DETR in `DAB-DETR: Dynamic Anchor Boxes are Better Queries for DETR
@@ -82,6 +129,9 @@ class DINO(nn.Module):
         vis_period: int = 0,
     ):
         super().__init__()
+
+        #self.edge_net = EdgesNet()
+
         # define backbone and position embedding module
         self.backbone = backbone
         self.position_embedding = position_embedding
@@ -151,6 +201,14 @@ class DINO(nn.Module):
         if vis_period > 0:
             assert input_format is not None, "input_format is required for visualization!"
 
+        EDGES = False
+        if EDGES:
+            self.weights_x = nn.Parameter(torch.tensor([[1.0], [2.0], [1.0]], requires_grad=True, device=self.device))
+            self.zero_vector = torch.zeros((3, 1), device=self.device)
+            self.weights_y = nn.Parameter(torch.tensor([[1.0, 2.0, 1.0]], requires_grad=True, device=self.device))
+            self.zero_y_vector = torch.zeros((1, 3), device=self.device)
+        #self.conv1 = nn.Conv2d(3, 3, 3, device=self.device, padding='same')
+
 
     def forward(self, batched_inputs):
         """Forward function of `DINO` which excepts a list of dict as inputs.
@@ -179,18 +237,41 @@ class DINO(nn.Module):
         """
         images = self.preprocess_image(batched_inputs)
 
+        it = images.tensor
+        EDGES = False
+        # Adaptive Edge Net
+        # Currently edge params are shared across channels and summed
+        # Edges X Direction
+        if EDGES:
+            kernel_x = torch.cat((self.weights_x, self.zero_vector, -self.weights_x), 1)
+            kernel_x = kernel_x.view(1, 1, 3, 3).repeat(1, 3, 1, 1).to(self.device)
+            x1 = F.conv2d(it, kernel_x, padding='same')
+
+            # Edges Y Direction
+            kernel_y = torch.cat((self.weights_y, self.zero_y_vector, -self.weights_y), 0)
+            kernel_y = kernel_y.view(1, 1, 3, 3).repeat(1, 3, 1, 1).to(self.device)
+            x2 = F.conv2d(it, kernel_y, padding='same')
+
+            edge_mag = torch.sqrt(torch.pow(x1, 2) + torch.pow(x2, 2) + 1e-6)
+
+            # for name, param in self.named_parameters():
+            #     if param.requires_grad and name == "weights_y":
+            #         print(name, param.data, param.grad)
+            # breakpoint()
+            it = torch.concat((it, edge_mag), 1)
+
+        # DINO DETR
         if self.training:
-            #breakpoint()
-            batch_size, num_channels, H, W = images.tensor.shape
-            img_masks = images.tensor.new_ones(batch_size, H, W)
+            batch_size, num_channels, H, W = it.shape
+            img_masks = it.new_ones(batch_size, H, W)
             for img_id in range(batch_size):
                 img_h, img_w = batched_inputs[img_id]["instances"].image_size
                 img_masks[img_id, :img_h, :img_w] = 0
         else:
-            batch_size, _, H, W = images.tensor.shape
-            img_masks = images.tensor.new_zeros(batch_size, H, W)
+            batch_size, _, H, W = it.shape
+            img_masks = it.new_zeros(batch_size, H, W)
 
-        features = self.backbone(images.tensor)  # output feature dict
+        features = self.backbone(it)  # output feature dict
 
         # project backbone features to the reuired dimension of transformer
         # we use multi-scale features in DINO
@@ -506,6 +587,7 @@ class DINO(nn.Module):
     def preprocess_image(self, batched_inputs, edges_only=True, gray_only=True):
         """GPU Gaussian followed by Sobel"""
         # # [Batch size, num_channels, height, width]
+        #learnable_edges = True
         rgb_only = True
         bilateral = False
         fourier = False

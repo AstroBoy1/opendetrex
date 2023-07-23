@@ -67,7 +67,10 @@ VOC_COCO_CLASS_NAMES = {}
 ALL_CLASSES = tuple(itertools.chain(VOC_CLASS_NAMES, T2_CLASS_NAMES, T3_CLASS_NAMES, T4_CLASS_NAMES, UNK_CLASS))
 VOC_COCO_CLASS_NAMES["TOWOD"] = VOC_CLASS_NAMES
 
-dir = "../PROB/data/VOC2007"
+#dir = "../PROB/data/VOC2007"
+dir = "pseudolabels/t2"
+
+register_pascal_voc("debug", dir, "debug", 2007, ALL_CLASSES)
 register_pascal_voc("towod_t1", dir, "owod_t1_train", 2007, ALL_CLASSES)
 register_pascal_voc("towod_t2", dir, "owod_t2_train", 2007, ALL_CLASSES)
 register_pascal_voc("towod_t3", dir, "owod_t3_train", 2007, ALL_CLASSES)
@@ -76,7 +79,7 @@ register_pascal_voc("towod_t4", dir, "owod_t4_train", 2007, ALL_CLASSES)
 register_pascal_voc("towod_test", dir, "test", 2007, ALL_CLASSES)
 
 dataloader.train = L(build_detection_train_loader)(
-    dataset=L(get_detection_dataset_dicts)(names="towod_t4"),
+    dataset=L(get_detection_dataset_dicts)(names="towod_t2"),
     mapper=L(DetrDatasetMapper)(
         augmentation=[
             L(T.RandomFlip)(),

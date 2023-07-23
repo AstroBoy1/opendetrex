@@ -9,9 +9,9 @@ from typing import List, Tuple, Union
 from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.structures import BoxMode
 from detectron2.utils.file_io import PathManager
-
+import pickle
 import itertools
-
+from collections import defaultdict
 __all__ = ["load_voc_instances", "register_pascal_voc"]
 
 
@@ -77,9 +77,11 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
         split (str): one of "train", "test", "val", "trainval"
         class_names: list or tuple of class names
     """
+    
     UNKNOWN = False
-    NUM_CLASSES = 40
-    PREV_KNOWN = 20
+    NUM_CLASSES = 20
+    PREV_KNOWN = 0
+
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:
         fileids = np.loadtxt(f, dtype=np.str)
     # fileids is a string
@@ -87,13 +89,14 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     annotation_dirname = PathManager.get_local_path(os.path.join(dirname, "Annotations/"))
     dicts = []
     exemplar_set = set()
-    # with open("../PROB/data/VOC2007/ImageSets/Main/owod_t2_ft.txt") as fp:
-    #     exemplar_files = fp.readlines()
-    # for ef in exemplar_files:
-    #     exemplar_set.add(ef.rstrip())
+    with open("../PROB/data/VOC2007/ImageSets/Main/owod_t2_ft.txt") as fp:
+        exemplar_files = fp.readlines()
+    for ef in exemplar_files:
+        exemplar_set.add(ef.rstrip())
     pseudo_file_set = set()
-    # with open("pseudo_files_set.pickle", "rb") as fp:
-    #     pseudo_file_set = pickle.load(fp)
+    with open("pseudo_files_set.pickle", "rb") as fp:
+        pseudo_file_set = pickle.load(fp)
+    exemplar_class_counts = defaultdict(int)
     for fileid in fileids:
         anno_file = os.path.join(annotation_dirname, fileid + ".xml")
         jpeg_file = os.path.join(dirname, "JPEGImages", fileid + ".jpg")
@@ -146,6 +149,17 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
                     # if fileid in pseudo_file_set:
                     #     count += 1
                     if cid >= PREV_KNOWN or (cid < PREV_KNOWN and fileid in pseudo_file_set):
+
+                    #if cid >= PREV_KNOWN or (cid < PREV_KNOWN and fileid in exemplar_set):
+                        if cid < PREV_KNOWN and fileid in exemplar_set:
+                            exemplar_class_counts[cid] += 1
+                            if exemplar_class_counts[cid] <= 50:
+                                #print("hit max for class", cid)
+                                instances.append(
+                                    {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
+                                )
+                            else:
+                                continue
                         instances.append(
                             {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
                         )

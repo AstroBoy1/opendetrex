@@ -59,6 +59,12 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         self._cpu_device = torch.device("cpu")
         self._logger = logging.getLogger(__name__)
 
+        # For calculating F1 threshold for incremental pseudolabels
+        self.df = pd.DataFrame()
+        self.df_classes = []
+        self.df_probs = []
+        self.df_tp = []
+
     def reset(self):
         self._predictions = defaultdict(list)  # class name -> list of prediction strings
 
@@ -89,11 +95,15 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         ONLY_PREDICT = False
         PREVIOUS_KNOWN = 20
         NUM_CLASSES = 40
-        UNKNOWN = True
+        UNKNOWN = False
         SAVE_SCORES = False
+        # For f1 pseudo calculation
         SAVE_ALL_SCORES = False
         UPPER_THRESH = 100
-        SINGLE_BRANCH = True
+        PSEUDO_LABEL_KNOWN = False
+        if PSEUDO_LABEL_KNOWN:
+            UPPER_THRESH = 55
+        SINGLE_BRANCH = False
         predict_fn = "predictions/t2/known_dual_test.pickle"
 
         all_predictions = comm.gather(self._predictions, dst=0)
@@ -158,6 +168,8 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                     cls_id = 0
                     cls_name = "aeroplane"
                     #print(cls_id, cls_name)
+                    #breakpoint()
+                    # Put all the predictions together
                     lines = predictions.get(cls_id, [""])
                     with open(res_file_template.format(cls_name), "w") as f:
                         f.write("\n".join(lines))
@@ -199,7 +211,10 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                             self._image_set_path,
                             cls_name,
                             ovthresh=thresh / 100.0,
-                            use_07_metric=self._is_2007,
+                            use_07_metric=self._is_2007, df_classes=self.df_classes,
+                        df_probs=self.df_probs,
+                        df_tp=self.df_tp,
+                        df_save=SAVE_ALL_SCORES,
                         )
                         aps[thresh].append(ap * 100)
                     if cls_id == PREVIOUS_KNOWN - 1:
@@ -210,7 +225,8 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                     self.df["classes"] = self.df_classes
                     self.df["probs"] = self.df_probs
                     self.df["tp"] = self.df_tp
-                    self.df.to_csv("t1_tpfp_scores.csv")
+                    self.df.to_csv("t1_known_tpfp_scores.csv")
+                    print("saved tpfp scores")
                 map_current = np.mean(aps[50][PREVIOUS_KNOWN:])
                 ret["bbox_current"] = {"AP50": map_current}
                 mAP = {iou: np.mean(x) for iou, x in aps.items()}
@@ -636,6 +652,8 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     # assumes annotations are in annopath.format(imagename)
     # assumes imagesetfile is a text file with each line an image name
     UNKNOWN = False
+    PSEUDO_KNOWNS = False
+
     T2_CLASS_NAMES = {
         "truck", "traffic light", "fire hydrant", "stop sign", "parking meter",
         "bench", "elephant", "bear", "zebra", "giraffe",
@@ -721,7 +739,6 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     # For each image id key, value is a list of bounding boxes
     image_id_boxes = defaultdict(list)
     image_id_scores = defaultdict(list)
-    PSEUDO_KNOWNS = False
     # For each image id key, value is a list of bounding boxes
     image_id_boxes = defaultdict(list)
     image_id_scores = defaultdict(list)
@@ -801,9 +818,9 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
                 image_ids_nms_boxes[key] = picked_boxes
                 image_ids_nms_scores[key] = picked_score
             # breakpoint()
-            with open("pseudolabels/t2/known_50/boxes_" + str(classname) + ".pickle", 'wb') as handle:
+            with open("pseudolabels/t2/known_50_2/boxes_" + str(classname) + ".pickle", 'wb') as handle:
                 pickle.dump(image_ids_nms_boxes, handle)
-            with open("pseudolabels/t2/known_50/scores_" + str(classname) + ".pickle", 'wb') as handle:
+            with open("pseudolabels/t2/known_50_2/scores_" + str(classname) + ".pickle", 'wb') as handle:
                 pickle.dump(image_ids_nms_scores, handle)
             print(classname, npos, len(image_ids_nms_boxes))
             # with open("pseudolabels/t2/known/tpscores_" + str(classname) + ".pickle", 'wb') as handle:

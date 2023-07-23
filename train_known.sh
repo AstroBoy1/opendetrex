@@ -1,2 +1,2 @@
-python tools/train_net.py --config-file projects/dino/configs/r50_4scale_unknown.py \
+python tools/train_net.py --config-file projects/dino/configs/dino_r50_4scale_pretrained_known.py \
                           --num-gpus 2
