@@ -78,10 +78,11 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
         class_names: list or tuple of class names
     """
     
-    UNKNOWN = False
-    NUM_CLASSES = 40
-    PREV_KNOWN = 20
+    UNKNOWN = True
+    PREV_KNOWN = 40
     EXEMPLAR = False
+    PSEUDO = False
+    NUM_CLASSES = PREV_KNOWN + 20
 
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:
         fileids = np.loadtxt(f, dtype=np.str)
@@ -90,13 +91,15 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     annotation_dirname = PathManager.get_local_path(os.path.join(dirname, "Annotations/"))
     dicts = []
     exemplar_set = set()
-    with open("../PROB/data/VOC2007/ImageSets/Main/owod_t2_ft.txt") as fp:
-        exemplar_files = fp.readlines()
-    for ef in exemplar_files:
-        exemplar_set.add(ef.rstrip())
+    if EXEMPLAR:
+        with open("../PROB/data/VOC2007/ImageSets/Main/owod_t2_ft.txt") as fp:
+            exemplar_files = fp.readlines()
+        for ef in exemplar_files:
+            exemplar_set.add(ef.rstrip())
     pseudo_file_set = set()
-    with open("pseudo_files_set.pickle", "rb") as fp:
-        pseudo_file_set = pickle.load(fp)
+    if PSEUDO:
+        with open("pseudo_files_set.pickle", "rb") as fp:
+            pseudo_file_set = pickle.load(fp)
     exemplar_class_counts = defaultdict(int)
     for fileid in fileids:
         anno_file = os.path.join(annotation_dirname, fileid + ".xml")

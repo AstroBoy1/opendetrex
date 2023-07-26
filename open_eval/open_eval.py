@@ -53,6 +53,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         )
         self._anno_file_template = os.path.join(annotation_dir_local, "{}.xml")
         self._image_set_path = os.path.join(meta.dirname, "ImageSets", "Main", meta.split + ".txt")
+        print(self._image_set_path)
         self._class_names = meta.thing_classes
         assert meta.year in [2007, 2012], meta.year
         self._is_2007 = meta.year == 2007
@@ -93,18 +94,21 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         """
 
         ONLY_PREDICT = False
-        PREVIOUS_KNOWN = 20
-        NUM_CLASSES = 40
-        UNKNOWN = False
+        PREVIOUS_KNOWN = 60
+        NUM_CLASSES = 80
+        UNKNOWN = True
         SAVE_SCORES = False
         # For f1 pseudo calculation
         SAVE_ALL_SCORES = False
+
         UPPER_THRESH = 100
         PSEUDO_LABEL_KNOWN = False
         if PSEUDO_LABEL_KNOWN:
             UPPER_THRESH = 55
         SINGLE_BRANCH = False
-        predict_fn = "predictions/t2/known_dual_test.pickle"
+        known_removal = True
+        predict_fn = "predictions/t1/known_dual_test.pickle"
+        tpfp_fn = "t2_known_tpfp_scores.csv"
 
         all_predictions = comm.gather(self._predictions, dst=0)
 
@@ -119,7 +123,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         image_id = line_split[0]
                         image_prediction_hash[image_id].append([clsid] + line_split[1:])
             with open(predict_fn, 'wb') as handle:
-                print("saved predictions")
+                print("saved predictions", predict_fn)
                 pickle.dump(image_prediction_hash, handle)
             return
         # key: imageid, value: predictions
@@ -173,14 +177,14 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                     lines = predictions.get(cls_id, [""])
                     with open(res_file_template.format(cls_name), "w") as f:
                         f.write("\n".join(lines))
-                    for thresh in range(50, 80, 25):
+                    for thresh in range(50, 55, 5):
                         rec, prec, ap = owod_eval(
                             res_file_template,
                             self._anno_file_template,
                             self._image_set_path,
                             cls_name,
                             ovthresh=thresh / 100.0,
-                            use_07_metric=self._is_2007,
+                            use_07_metric=self._is_2007, known_removal=known_removal, known_pred_fn=predict_fn
                         )
                         #aps[thresh].append(ap * 100)
                         aps[thresh].append(ap)
@@ -190,8 +194,9 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                 ret = OrderedDict()
                 mAP = {iou: np.mean(x) for iou, x in aps.items()}
                 # returns dictionary of keys(metrics) and values
-                ret["bbox"] = {"AP": np.mean(list(mAP.values())), "AP50": mAP[50], "AP75": mAP[75],
-                               "unknown_recall50": recs[50]}
+                # ret["bbox"] = {"AP": np.mean(list(mAP.values())), "AP50": mAP[50], "AP75": mAP[75],
+                #                "unknown_recall50": recs[50]}
+                ret["bbox"] = {"unknown_recall50": recs[50]}
                 return ret
             else:
                 ret = OrderedDict()
@@ -214,19 +219,20 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                             use_07_metric=self._is_2007, df_classes=self.df_classes,
                         df_probs=self.df_probs,
                         df_tp=self.df_tp,
-                        df_save=SAVE_ALL_SCORES,
+                        df_save=SAVE_ALL_SCORES, unknown=False, pseudo_knowns=False
                         )
                         aps[thresh].append(ap * 100)
+                    if SAVE_ALL_SCORES:
+                        self.df["classes"] = self.df_classes
+                        self.df["probs"] = self.df_probs
+                        self.df["tp"] = self.df_tp
+                        self.df.to_csv(tpfp_fn)
+                        print("saved tpfp scores")
+                        return
                     if cls_id == PREVIOUS_KNOWN - 1:
                         map_prev = {iou: np.mean(x) for iou, x in aps.items()}
                         ret["bbox_prev"] = {"AP": np.mean(list(map_prev.values())),
                                             "AP50": map_prev[50], "AP75": map_prev[75]}
-                if SAVE_ALL_SCORES:
-                    self.df["classes"] = self.df_classes
-                    self.df["probs"] = self.df_probs
-                    self.df["tp"] = self.df_tp
-                    self.df.to_csv("t1_known_tpfp_scores.csv")
-                    print("saved tpfp scores")
                 map_current = np.mean(aps[50][PREVIOUS_KNOWN:])
                 ret["bbox_current"] = {"AP50": map_current}
                 mAP = {iou: np.mean(x) for iou, x in aps.items()}
@@ -409,7 +415,7 @@ def iou(BBGT, bb):
     return ovmax, jmax
 
 
-def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_metric=False, gph=None):
+def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_metric=False, gph=None, known_removal=False, known_pred_fn="predictions/t1/known_dual_test.pickle"):
     """rec, prec, ap = voc_eval(detpath,
                                 annopath,
                                 imagesetfile,
@@ -432,6 +438,9 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
     # assumes detections are in detpath.format(classname)
     # assumes annotations are in annopath.format(imagename)
     # assumes imagesetfile is a text file with each line an image name
+
+    #KNOWN_REMOVAL = False
+
     T2_CLASS_NAMES = {
         "truck", "traffic light", "fire hydrant", "stop sign", "parking meter",
         "bench", "elephant", "bear", "zebra", "giraffe",
@@ -453,8 +462,8 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
         "wine glass", "cup", "fork", "knife", "spoon", "bowl"
     }
 
-    T4_CLASS_NAMES.update(T3_CLASS_NAMES)
-    T4_CLASS_NAMES.update(T2_CLASS_NAMES)
+    #T4_CLASS_NAMES.update(T3_CLASS_NAMES)
+    #T4_CLASS_NAMES.update(T2_CLASS_NAMES)
     # first load gt
     # read list of images
     with PathManager.open(imagesetfile, "r") as f:
@@ -521,12 +530,13 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
 
     known_hash = defaultdict(list)
     #breakpoint()
-    with open('predictions/t1/known_dual_test.pickle', 'rb') as handle:
-        known_saved_hash = pickle.load(handle)
-        for key, value in known_saved_hash.items():
-            for prediction in value:
-                known_hash[key].append([float(prediction[2]), float(prediction[3]), float(prediction[4]),
-                                           float(prediction[5])])
+    if known_removal:
+        with open(known_pred_fn, 'rb') as handle:
+            known_saved_hash = pickle.load(handle)
+            for key, value in known_saved_hash.items():
+                for prediction in value:
+                    known_hash[key].append([float(prediction[2]), float(prediction[3]), float(prediction[4]),
+                                            float(prediction[5])])
         #breakpoint()
     unknown_hash = defaultdict(list)
     for key, value in zip(image_ids, BB):
@@ -628,7 +638,7 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
 
 
 def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_metric=False, df_classes=None,
-             df_probs=None, df_tp=None, df_save=False):
+             df_probs=None, df_tp=None, df_save=False, unknown=False, pseudo_knowns=False):
     """rec, prec, ap = voc_eval(detpath,
                                 annopath,
                                 imagesetfile,
@@ -651,8 +661,8 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     # assumes detections are in detpath.format(classname)
     # assumes annotations are in annopath.format(imagename)
     # assumes imagesetfile is a text file with each line an image name
-    UNKNOWN = False
-    PSEUDO_KNOWNS = False
+    UNKNOWN = unknown
+    PSEUDO_KNOWNS = pseudo_knowns
 
     T2_CLASS_NAMES = {
         "truck", "traffic light", "fire hydrant", "stop sign", "parking meter",
