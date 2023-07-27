@@ -15,7 +15,7 @@ from collections import defaultdict
 __all__ = ["load_voc_instances", "register_pascal_voc"]
 
 
-# fmt: off
+# This file is used to load the labels during training according to the task
 CLASS_NAMES = (
     "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat",
     "chair", "cow", "diningtable", "dog", "horse", "motorbike", "person",
@@ -78,8 +78,8 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
         class_names: list or tuple of class names
     """
     
-    UNKNOWN = True
-    PREV_KNOWN = 40
+    UNKNOWN = False
+    PREV_KNOWN = 0
     EXEMPLAR = False
     PSEUDO = False
     NUM_CLASSES = PREV_KNOWN + 20
@@ -147,6 +147,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
                     {"category_id": cid, "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
                 )
             else:
+                # Only add a label if it's a known object
                 if cid < NUM_CLASSES:
                     # if cls_index < PREV_KNOWN and fileid in exemplar_set:
                     #     print("exemplar file")

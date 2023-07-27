@@ -23,7 +23,8 @@ import pickle
 
 class PascalVOCDetectionEvaluator(DatasetEvaluator):
     """
-    Evaluate Pascal VOC style AP for Pascal VOC dataset.
+    Evaluate Pascal VOC style AP for Pascal VOC dataset. Tailored for the Open
+    World Benchmark.
     It contains a synchronization, therefore has to be called from all ranks.
 
     Note that the concept of AP can be implemented in different ways and may not
@@ -89,14 +90,16 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
 
     def evaluate(self):
         """
+        Evaluation code at inference for known precision and unknown recall
         Returns:
             dict: has a key "segm", whose value is a dict of "AP", "AP50", and "AP75".
         """
 
+        unknown_class_index = 80
         ONLY_PREDICT = False
-        PREVIOUS_KNOWN = 60
-        NUM_CLASSES = 80
-        UNKNOWN = True
+        PREVIOUS_KNOWN = 0
+        NUM_CLASSES = PREVIOUS_KNOWN + 20
+        UNKNOWN = False
         SAVE_SCORES = False
         # For f1 pseudo calculation
         SAVE_ALL_SCORES = False
@@ -106,12 +109,12 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         if PSEUDO_LABEL_KNOWN:
             UPPER_THRESH = 55
         SINGLE_BRANCH = False
-        known_removal = True
+        known_removal = False
         predict_fn = "predictions/t1/known_dual_test.pickle"
         tpfp_fn = "t2_known_tpfp_scores.csv"
 
         all_predictions = comm.gather(self._predictions, dst=0)
-
+        #breakpoint()
         # list containing dictionary of keys with classes and values predictions
         # each prediction contains [image id, score, xmin, ymin, xmax, ymax
         if ONLY_PREDICT:
@@ -138,12 +141,12 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                     # Always predict unknown for single branch
                     predictions[0].extend(lines)
                 else:
-                    predictions[clsid].extend(lines)
-        # Test on the top 50 predictions
-        # for count, pred in enumerate(predictions[0]):
-        #     split_line = pred.split(" ")
-        #     image_id = split_line[0]
-        #     general_predictions_hash[image_id].append(split_line)
+                    # Put all the predictions above the number of classes to the 80th class
+                    if clsid < NUM_CLASSES:
+                        predictions[clsid].extend(lines)
+                    else:
+                        predictions[unknown_class_index].extend(lines)
+        #breakpoint()
         del all_predictions
         self._logger.info(
             "Evaluating {} using {} metric. "
@@ -153,17 +156,9 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         )
 
         ret = OrderedDict()
-        # For saving probabilities for tp/fp for each class as a dataframe
-
         with tempfile.TemporaryDirectory(prefix="pascal_voc_eval_") as dirname:
             res_file_template = os.path.join(dirname, "{}.txt")
-
             aps = defaultdict(list)  # iou -> ap per class
-            # For each class, calculate the ap
-            #for cls_id, cls_name in enumerate(self._class_names):
-                # if cls_id != 80:
-                #     continue
-            # first 20 for task 1
             recs = {}
             recs[50] = []
 
@@ -171,8 +166,6 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                 for cls_id, cls_name in enumerate(self._class_names[1:2]):
                     cls_id = 0
                     cls_name = "aeroplane"
-                    #print(cls_id, cls_name)
-                    #breakpoint()
                     # Put all the predictions together
                     lines = predictions.get(cls_id, [""])
                     with open(res_file_template.format(cls_name), "w") as f:
@@ -200,28 +193,41 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                 return ret
             else:
                 ret = OrderedDict()
-                for cls_id, cls_name in enumerate(self._class_names[:NUM_CLASSES]):
+                unknown_recall_50 = 0
+                for cls_id, cls_name in enumerate(self._class_names[:NUM_CLASSES+1]):
+                    #print(cls_id)
+                    #breakpoint()
+                    if cls_id == NUM_CLASSES:
+                        cls_id = unknown_class_index
+                        cls_name = self._class_names[cls_id]
                     lines = predictions.get(cls_id, [""])
                     with open(res_file_template.format(cls_name), "w") as f:
                         f.write("\n".join(lines))
                     if SAVE_SCORES:
                         save_class_scores(predictions)
                         return 1
-                    # for thresh in range(50, 55, 5):
                     for thresh in range(50, UPPER_THRESH, 5):
                         # thresholds 50, 55, ...95
-                        rec, prec, ap = voc_eval(
-                            res_file_template,
-                            self._anno_file_template,
-                            self._image_set_path,
-                            cls_name,
-                            ovthresh=thresh / 100.0,
-                            use_07_metric=self._is_2007, df_classes=self.df_classes,
-                        df_probs=self.df_probs,
-                        df_tp=self.df_tp,
-                        df_save=SAVE_ALL_SCORES, unknown=False, pseudo_knowns=False
-                        )
-                        aps[thresh].append(ap * 100)
+                        # For debugging purposes
+                        if len(lines) == 1:
+                            rec, ap = [0], 0
+                        else:
+                            rec, prec, ap = voc_eval(
+                                res_file_template,
+                                self._anno_file_template,
+                                self._image_set_path,
+                                cls_name,
+                                ovthresh=thresh / 100.0,
+                                use_07_metric=self._is_2007, df_classes=self.df_classes,
+                            df_probs=self.df_probs,
+                            df_tp=self.df_tp,
+                            df_save=SAVE_ALL_SCORES, unknown=False, pseudo_knowns=False
+                            )
+                        if cls_id != unknown_class_index:
+                            aps[thresh].append(ap * 100)
+                        if thresh == 50 and cls_id == unknown_class_index:
+                            unknown_recall_50 = rec[-1]
+                    #breakpoint()
                     if SAVE_ALL_SCORES:
                         self.df["classes"] = self.df_classes
                         self.df["probs"] = self.df_probs
@@ -233,10 +239,11 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         map_prev = {iou: np.mean(x) for iou, x in aps.items()}
                         ret["bbox_prev"] = {"AP": np.mean(list(map_prev.values())),
                                             "AP50": map_prev[50], "AP75": map_prev[75]}
-                map_current = np.mean(aps[50][PREVIOUS_KNOWN:])
+                map_current = np.mean(aps[50][PREVIOUS_KNOWN:NUM_CLASSES])
                 ret["bbox_current"] = {"AP50": map_current}
                 mAP = {iou: np.mean(x) for iou, x in aps.items()}
                 ret["bbox"] = {"AP": np.mean(list(mAP.values())), "AP50": mAP[50], "AP75": mAP[75]}
+                ret["recall"] = {"UnknownRecall50": unknown_recall_50}
                 return ret
 
 
@@ -255,7 +262,9 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
 
 @lru_cache(maxsize=None)
 def parse_rec(filename):
-    """Parse a PASCAL VOC xml file."""
+    """Parse a PASCAL VOC xml file.
+    Used for loading the annotations for test evaluation
+    Unlike at train time, we load all of the labels"""
     with PathManager.open(filename) as f:
         tree = ET.parse(f)
     objects = []
@@ -274,7 +283,6 @@ def parse_rec(filename):
             int(bbox.find("ymax").text),
         ]
         objects.append(obj_struct)
-
     return objects
 
 
@@ -710,7 +718,7 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     for imagename in imagenames:
         R = [obj for obj in recs[imagename] if obj["name"] == classname]
         # Get only unknown rectangles
-        if classname == "aeroplane" and UNKNOWN:
+        if classname == "unknown":
             R = [obj for obj in recs[imagename] if obj["name"] in T4_CLASS_NAMES]
         # Get known rectangles only for t1
         # if classname == "aeroplane":
