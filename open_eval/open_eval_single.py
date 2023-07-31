@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) Facebook, Inc. and its affiliates.
-
+`
 import logging
 import numpy as np
 import os
@@ -110,11 +110,10 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
             UPPER_THRESH = 55
         SINGLE_BRANCH = True
         known_removal = True
-        predict_fn = "predictions/t1/known_dual_test.pickle"
+        predict_fn = "predictions/t1/single_known.pickle"
         tpfp_fn = "t2_known_tpfp_scores.csv"
 
         all_predictions = comm.gather(self._predictions, dst=0)
-        #breakpoint()
         # list containing dictionary of keys with classes and values predictions
         # each prediction contains [image id, score, xmin, ymin, xmax, ymax
         if ONLY_PREDICT:
@@ -504,7 +503,8 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
     # number of positive instances for the class
     npos = 0
     for imagename in imagenames:
-        R = [obj for obj in recs[imagename] if obj["name"] == classname]
+        R = None
+        #R = [obj for obj in recs[imagename] if obj["name"] == classname]
         # Get only unknown rectangles
         if classname == "aeroplane":
             R = [obj for obj in recs[imagename] if obj["name"] in T4_CLASS_NAMES]

@@ -78,7 +78,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
         class_names: list or tuple of class names
     """
     
-    UNKNOWN = False
+    UNKNOWN = True
     PREV_KNOWN = 0
     EXEMPLAR = False
     PSEUDO = False
@@ -139,6 +139,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             # 1 for unknown
             if UNKNOWN:
                 if cid >= NUM_CLASSES:
+                    continue
                     cid = 1
                 # 0 for known
                 else:

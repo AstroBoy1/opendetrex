@@ -99,15 +99,15 @@ class Trainer(SimpleTrainer):
             try:
                 self.before_train()
                 for self.iter in range(start_iter, max_iter):
-                    print("self.iter", self.iter)
+                    #print("self.iter", self.iter)
                     self.before_step()
                     # Alternate dataloader and loss function
-                    #if True:
-                    if self.iter % 2 == 0:
-                        print("dataloader 1")
+                    if True:
+                    #if self.iter % 2 == 0:
+                        #print("dataloader 1")
                         self.run_step()
                     else:
-                        print("dataloader 2")
+                        #print("dataloader 2")
                         self.run_step2()
                     self.after_step()
                 # self.iter == max_iter can be used by `after_train` to
@@ -195,6 +195,8 @@ class Trainer(SimpleTrainer):
         """
         with autocast(enabled=self.amp):
             loss_dict = self.model(data)
+            loss_dict.pop("loss_class")
+            #breakpoint()
             if isinstance(loss_dict, torch.Tensor):
                 losses = loss_dict
                 loss_dict = {"total_loss": loss_dict}

@@ -8,8 +8,10 @@ optimizer = get_config("common/optim.py").AdamW
 train = get_config("common/train.py").train
 
 # modify training config
-train.init_checkpoint = "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
-train.output_dir = "./output/deformable_detr_r50_50ep"
+#train.init_checkpoint = "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
+#train.init_checkpoint = "./models/dino_resnet50_pretrain_converted.pth"
+train.init_checkpoint = "./output/t1/known/deformable_detr_r50_50ep_scratch/model_0294999.pth"
+train.output_dir = "./output/t1/single/deformable_detr_r50_50ep_dino"
 
 # max training iterations
 train.max_iter = 375000
@@ -33,7 +35,8 @@ train.device = "cuda"
 model.device = train.device
 
 # 20 to test out task 1 training/testing
-model.num_classes = 20
+model.num_classes = 81
+model.num_queries = 100
 
 # modify optimizer config
 optimizer.lr = 1e-4
@@ -42,12 +45,12 @@ optimizer.weight_decay = 1e-4
 optimizer.params.lr_factor_func = lambda module_name: 0.1 if "backbone" in module_name else 1
 
 # modify dataloader config
-dataloader.train.num_workers = 16
+dataloader.train.num_workers = 8
 
 # please notice that this is total batch size.
 # surpose you're using 4 gpus for training and the batch size for
 # each gpu is 16/4 = 4
-dataloader.train.total_batch_size = 4
+dataloader.train.total_batch_size = 8
 #dataloader.train.total_batch_size = 16
 
 # dump the testing results into output_dir for visualization
