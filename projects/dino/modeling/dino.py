@@ -201,7 +201,7 @@ class DINO(nn.Module):
         if vis_period > 0:
             assert input_format is not None, "input_format is required for visualization!"
 
-        EDGES = False
+        EDGES = True
         if EDGES:
             self.weights_x = nn.Parameter(torch.tensor([[1.0], [2.0], [1.0]], requires_grad=True, device=self.device))
             self.zero_vector = torch.zeros((3, 1), device=self.device)
@@ -238,7 +238,7 @@ class DINO(nn.Module):
         images = self.preprocess_image(batched_inputs)
 
         it = images.tensor
-        EDGES = False
+        EDGES = True
         # Adaptive Edge Net
         # Currently edge params are shared across channels and summed
         # Edges X Direction
@@ -587,9 +587,8 @@ class DINO(nn.Module):
     def preprocess_image(self, batched_inputs, edges_only=True, gray_only=True):
         """GPU Gaussian followed by Sobel"""
         # # [Batch size, num_channels, height, width]
-        #learnable_edges = True
-        rgb_only = True
-        bilateral = False
+        rgb_only = False
+        bilateral = True
         fourier = False
         frequency = False
         if rgb_only:

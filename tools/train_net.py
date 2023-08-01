@@ -56,14 +56,13 @@ class Trainer(SimpleTrainer):
         self,
         model,
         dataloader,
-        dataloader2,
         optimizer,
         amp=False,
         clip_grad_params=None,
         grad_scaler=None,
     ):
         super().__init__(model=model, data_loader=dataloader, optimizer=optimizer)
-        self.data_loader2 = dataloader2
+        #self.data_loader2 = dataloader2
         self._data_loader2_iter_obj = None
         unsupported = "AMPTrainer does not support single-process multi-device training!"
         if isinstance(model, DistributedDataParallel):
@@ -101,14 +100,7 @@ class Trainer(SimpleTrainer):
                 for self.iter in range(start_iter, max_iter):
                     #print("self.iter", self.iter)
                     self.before_step()
-                    # Alternate dataloader and loss function
-                    if True:
-                    #if self.iter % 2 == 0:
-                        #print("dataloader 1")
-                        self.run_step()
-                    else:
-                        #print("dataloader 2")
-                        self.run_step2()
+                    self.run_step()
                     self.after_step()
                 # self.iter == max_iter can be used by `after_train` to
                 # tell whether the training successfully finished or failed
@@ -119,13 +111,6 @@ class Trainer(SimpleTrainer):
                 raise
             finally:
                 self.after_train()
-
-    @property
-    def _data_loader2_iter(self):
-        # only create the data loader iterator when it is used
-        if self._data_loader2_iter_obj is None:
-            self._data_loader2_iter_obj = iter(self.data_loader2)
-        return self._data_loader2_iter_obj
     
 
     def run_step(self):
@@ -148,6 +133,8 @@ class Trainer(SimpleTrainer):
         """
         with autocast(enabled=self.amp):
             loss_dict = self.model(data)
+            # regression only
+            loss_dict.pop("loss_class")
             if isinstance(loss_dict, torch.Tensor):
                 losses = loss_dict
                 loss_dict = {"total_loss": loss_dict}
@@ -310,7 +297,7 @@ def do_train(args, cfg):
 
     # build training loader
     train_loader = instantiate(cfg.dataloader.train)
-    train_loader2 = instantiate(cfg.dataloader.train2)
+    #train_loader2 = instantiate(cfg.dataloader.train2)
     
     # create ddp model
     model = create_ddp_model(model, **cfg.train.ddp)
@@ -321,7 +308,6 @@ def do_train(args, cfg):
     trainer = Trainer(
         model=model,
         dataloader=train_loader,
-        dataloader2=train_loader2,
         optimizer=optim,
         amp=cfg.train.amp.enabled,
         clip_grad_params=cfg.train.clip_grad.params if cfg.train.clip_grad.enabled else None,

@@ -185,7 +185,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         if thresh == 50 and cls_id == 0:
                             recs[50] = rec[-1]
                 ret = OrderedDict()
-                mAP = {iou: np.mean(x) for iou, x in aps.items()}
+                #mAP = {iou: np.mean(x) for iou, x in aps.items()}
                 # returns dictionary of keys(metrics) and values
                 # ret["bbox"] = {"AP": np.mean(list(mAP.values())), "AP50": mAP[50], "AP75": mAP[75],
                 #                "unknown_recall50": recs[50]}
@@ -481,8 +481,8 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
         "wine glass", "cup", "fork", "knife", "spoon", "bowl"
     }
 
-    #T4_CLASS_NAMES.update(T3_CLASS_NAMES)
-    #T4_CLASS_NAMES.update(T2_CLASS_NAMES)
+    T4_CLASS_NAMES.update(T3_CLASS_NAMES)
+    T4_CLASS_NAMES.update(T2_CLASS_NAMES)
     # first load gt
     # read list of images
     with PathManager.open(imagesetfile, "r") as f:
@@ -504,10 +504,10 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
     # number of positive instances for the class
     npos = 0
     for imagename in imagenames:
-        R = [obj for obj in recs[imagename] if obj["name"] == classname]
+        #R = [obj for obj in recs[imagename] if obj["name"] == classname]
         # Get only unknown rectangles
-        if classname == "aeroplane":
-            R = [obj for obj in recs[imagename] if obj["name"] in T4_CLASS_NAMES]
+        #if classname == "aeroplane":
+        R = [obj for obj in recs[imagename] if obj["name"] in T4_CLASS_NAMES]
         # Get known rectangles only for t1
         # if classname == "aeroplane":
         #     R = [obj for obj in recs[imagename] if obj["name"] not in T4_CLASS_NAMES]
