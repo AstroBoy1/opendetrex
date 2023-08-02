@@ -111,12 +111,12 @@ def fscore(thresh, df_view, num_positive=10000):
 
 def main():
     thresholds = [x / 10 for x in range(10)]
-    fn = "t1_known_tpfp_scores.csv"
+    fn = "t2_known_tpfp_scores.csv"
     df = pd.read_csv(fn)
     class_threshold_df = pd.DataFrame()
     class_list = []
     thresh_list = []
-    cc, num_files, class_files = load_voc_instances(dirname="/nfs/hpc/share/omorim/projects/PROB/data/VOC2007", split="train",
+    cc, num_files, class_files = load_voc_instances(dirname="/nfs/hpc/share/omorim/projects/PROB/data/VOC2007", split="owod_t2_train_sample",
                                                     class_names=VOC_COCO_CLASS_NAMES["TOWOD"])
     for class_name in set(df.classes.values):
         print(class_name)
@@ -143,7 +143,7 @@ def main():
     class_threshold_df["class"] = class_list
     class_threshold_df["threshold"] = thresh_list
     print(class_threshold_df)
-    class_threshold_df.to_csv("t1_known50_class_f1_thresholds.csv")
+    class_threshold_df.to_csv("t2_known50_class_f1_thresholds.csv")
     return 1
 
 

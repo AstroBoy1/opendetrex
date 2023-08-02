@@ -102,7 +102,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         UNKNOWN = False
         SAVE_SCORES = False
         # For f1 pseudo calculation
-        SAVE_ALL_SCORES = True
+        SAVE_ALL_SCORES = False
 
         UPPER_THRESH = 100
         PSEUDO_LABEL_KNOWN = True
@@ -194,7 +194,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
             else:
                 ret = OrderedDict()
                 unknown_recall_50 = 0
-                for cls_id, cls_name in enumerate(self._class_names[PREVIOUS_KNOWN:NUM_CLASSES]):
+                for cls_id, cls_name in enumerate(self._class_names[:NUM_CLASSES]):
                     print(cls_id)
                     #breakpoint()
                     if cls_id == NUM_CLASSES:
@@ -221,7 +221,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                                 use_07_metric=self._is_2007, df_classes=self.df_classes,
                             df_probs=self.df_probs,
                             df_tp=self.df_tp,
-                            df_save=SAVE_ALL_SCORES, unknown=False, pseudo_knowns=False
+                            df_save=SAVE_ALL_SCORES, unknown=False, pseudo_knowns=True
                             )
                         if cls_id != unknown_class_index:
                             aps[thresh].append(ap * 100)
@@ -231,7 +231,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                     if cls_id == PREVIOUS_KNOWN - 1:
                         map_prev = {iou: np.mean(x) for iou, x in aps.items()}
                         ret["bbox_prev"] = {"AP": np.mean(list(map_prev.values())),
-                                            "AP50": map_prev[50], "AP75": map_prev[75]}
+                                            "AP50": map_prev[50]}
                 if SAVE_ALL_SCORES:
                     self.df["classes"] = self.df_classes
                     self.df["probs"] = self.df_probs
@@ -846,9 +846,9 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
                 image_ids_nms_boxes[key] = picked_boxes
                 image_ids_nms_scores[key] = picked_score
             # breakpoint()
-            with open("pseudolabels/t2/known_50_2/boxes_" + str(classname) + ".pickle", 'wb') as handle:
+            with open("pseudolabels/t3/known/boxes_" + str(classname) + ".pickle", 'wb') as handle:
                 pickle.dump(image_ids_nms_boxes, handle)
-            with open("pseudolabels/t2/known_50_2/scores_" + str(classname) + ".pickle", 'wb') as handle:
+            with open("pseudolabels/t3/known/scores_" + str(classname) + ".pickle", 'wb') as handle:
                 pickle.dump(image_ids_nms_scores, handle)
             print(classname, npos, len(image_ids_nms_boxes))
             # with open("pseudolabels/t2/known/tpscores_" + str(classname) + ".pickle", 'wb') as handle:

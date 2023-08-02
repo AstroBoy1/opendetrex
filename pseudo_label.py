@@ -17,7 +17,7 @@ VOC_CLASS_NAMES_COCOFIED = set([
 
 
 def main():
-    out_dr = "pseudolabels/t2/Annotations"
+    out_dr = "pseudolabels/t3/Annotations"
     image_box_hash = defaultdict(list)
     image_class_hash = defaultdict(list)
     for class_name in t1_classes:
