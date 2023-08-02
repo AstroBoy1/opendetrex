@@ -65,6 +65,7 @@ dir = "../PROB/data/VOC2007"
 register_pascal_voc("debug", dir, "debug", 2007, ALL_CLASSES)
 register_pascal_voc("towod_t1", dir, "owod_t1_train", 2007, ALL_CLASSES)
 register_pascal_voc("towod_t2", dir, "owod_t2_train", 2007, ALL_CLASSES)
+register_pascal_voc("towod_t2_sample", dir, "owod_t2_train_sample", 2007, ALL_CLASSES)
 register_pascal_voc("towod_t3", dir, "owod_t3_train", 2007, ALL_CLASSES)
 register_pascal_voc("towod_t4", dir, "owod_t4_train", 2007, ALL_CLASSES)
 
@@ -131,7 +132,7 @@ dataloader.train = L(build_detection_train_loader)(
 
 # Augmentations to apply to the test data
 dataloader.test = L(build_detection_test_loader)(
-    dataset=L(get_detection_dataset_dicts)(names="towod_test", filter_empty=False),
+    dataset=L(get_detection_dataset_dicts)(names="towod_t2_sample", filter_empty=False),
     mapper=L(DetrDatasetMapper)(
         augmentation=[
             L(T.ResizeShortestEdge)(
