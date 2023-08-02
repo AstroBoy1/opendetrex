@@ -201,7 +201,7 @@ class DINO(nn.Module):
         if vis_period > 0:
             assert input_format is not None, "input_format is required for visualization!"
 
-        EDGES = True
+        EDGES = False
         if EDGES:
             self.weights_x = nn.Parameter(torch.tensor([[1.0], [2.0], [1.0]], requires_grad=True, device=self.device))
             self.zero_vector = torch.zeros((3, 1), device=self.device)
@@ -235,10 +235,13 @@ class DINO(nn.Module):
                 - dict["aux_outputs"]: Optional, only returned when auxilary losses are activated. It is a list of
                             dictionnaries containing the two above keys for each decoder layer.
         """
+        #breakpoint()
+        #print("processing images")
         images = self.preprocess_image(batched_inputs)
+        #print("processed images")
 
         it = images.tensor
-        EDGES = True
+        EDGES = False
         # Adaptive Edge Net
         # Currently edge params are shared across channels and summed
         # Edges X Direction
@@ -584,13 +587,16 @@ class DINO(nn.Module):
             dn_metas["output_known_lbs_bboxes"] = out
         return outputs_class, outputs_coord
 
-    def preprocess_image(self, batched_inputs, edges_only=True, gray_only=True):
+    def preprocess_image(self, batched_inputs, edges_only=False, gray_only=False):
         """GPU Gaussian followed by Sobel"""
         # # [Batch size, num_channels, height, width]
+        #print("process function")
+        #breakpoint()
         rgb_only = False
-        bilateral = True
+        bilateral = False
         fourier = False
         frequency = False
+        images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
         if rgb_only:
             images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
             return ImageList.from_tensors(images)
@@ -600,21 +606,21 @@ class DINO(nn.Module):
             images = [x["image"].to(self.device) for x in batched_inputs]
         elif bilateral:
             images = [x["image"] for x in batched_inputs]
-        # kernel_v = [[1, 0, -1],
-        #             [2, 0, -2],
-        #             [1, 0, -1]]
-        # kernel_h = [[1, 2, 1],
-        #             [0, 0, 0],
-        #             [-1, -2, -1]]
-        # kernel_h = torch.FloatTensor(kernel_h).unsqueeze(0).unsqueeze(0).to(self.device)
-        # kernel_v = torch.FloatTensor(kernel_v).unsqueeze(0).unsqueeze(0).to(self.device)
-        # https://homepages.inf.ed.ac.uk/rbf/HIPR2/gsmooth.htm
-        # gaussian_kernel = [[1, 4, 7, 4, 1],
-        #                    [4, 16, 26, 16, 4],
-        #                    [7, 26, 41, 26, 7],
-        #                    [4, 16, 26, 16, 4],
-        #                    [1, 4, 7, 4, 1]]
-        # gaussian_kernel = torch.FloatTensor([[x / 273 for x in y] for y in gaussian_kernel]).unsqueeze(0).unsqueeze(0).to(self.device)
+        kernel_v = [[1, 0, -1],
+                    [2, 0, -2],
+                    [1, 0, -1]]
+        kernel_h = [[1, 2, 1],
+                    [0, 0, 0],
+                    [-1, -2, -1]]
+        kernel_h = torch.FloatTensor(kernel_h).unsqueeze(0).unsqueeze(0).to(self.device)
+        kernel_v = torch.FloatTensor(kernel_v).unsqueeze(0).unsqueeze(0).to(self.device)
+        #https://homepages.inf.ed.ac.uk/rbf/HIPR2/gsmooth.htm
+        gaussian_kernel = [[1, 4, 7, 4, 1],
+                           [4, 16, 26, 16, 4],
+                           [7, 26, 41, 26, 7],
+                           [4, 16, 26, 16, 4],
+                           [1, 4, 7, 4, 1]]
+        gaussian_kernel = torch.FloatTensor([[x / 273 for x in y] for y in gaussian_kernel]).unsqueeze(0).unsqueeze(0).to(self.device)
         for index, im in enumerate(images):
             # https://docs.opencv.org/4.x/d4/d86/group__imgproc__filter.html#ga9d7064d478c95d60003cf839430737ed
             if bilateral:
@@ -662,6 +668,7 @@ class DINO(nn.Module):
                 images[index] = edge_im
             else:
                 images[index] = torch.cat([images[index], edge_im], dim=0)
+            #breakpoint()
         images = ImageList.from_tensors(images)
         return images
 
@@ -685,6 +692,65 @@ class DINO(nn.Module):
         #breakpoint()
         return images
 
+    def nms(self, bounding_boxes, confidence_score, threshold):
+        # If no bounding boxes, return empty list
+        if len(bounding_boxes) == 0:
+            return [], []
+        #breakpoint()
+        # Bounding boxes
+        #boxes = np.array(bounding_boxes)
+        boxes = np.array(torch.clone(bounding_boxes).detach().cpu())
+
+        # coordinates of bounding boxes
+        start_x = boxes[:, 0]
+        start_y = boxes[:, 1]
+        end_x = boxes[:, 2]
+        end_y = boxes[:, 3]
+
+        # Confidence scores of bounding boxes
+        #score = confidence_score.cpu()
+        score = np.array(torch.tensor(confidence_score).cpu())
+
+        # Picked bounding boxes
+        picked_boxes = []
+        picked_score = []
+
+        # Compute areas of bounding boxes
+        areas = (end_x - start_x + 1) * (end_y - start_y + 1)
+
+        # Sort by confidence score of bounding boxes
+        #order = np.argsort(score)
+        order = np.argsort(score)
+
+        # Iterate bounding boxes
+        while order.size > 0:
+            # The index of largest confidence score
+            index = order[-1]
+
+            # Pick the bounding box with largest confidence score
+            #picked_index.append(index)
+            picked_boxes.append(bounding_boxes[index])
+            picked_score.append(confidence_score[index])
+
+            # Compute ordinates of intersection-over-union(IOU)
+            x1 = np.maximum(start_x[index], start_x[order[:-1]])
+            x2 = np.minimum(end_x[index], end_x[order[:-1]])
+            y1 = np.maximum(start_y[index], start_y[order[:-1]])
+            y2 = np.minimum(end_y[index], end_y[order[:-1]])
+
+            # Compute areas of intersection-over-union
+            w = np.maximum(0.0, x2 - x1 + 1)
+            h = np.maximum(0.0, y2 - y1 + 1)
+            intersection = w * h
+
+            # Compute the ratio between intersection and union
+            ratio = intersection / (areas[index] + areas[order[:-1]] - intersection)
+
+            left = np.where(ratio < threshold)
+            order = order[left]
+        #breakpoint()
+        return picked_boxes, picked_score
+
     def inference(self, box_cls, box_pred, image_sizes):
         """
         Arguments:
@@ -700,27 +766,39 @@ class DINO(nn.Module):
         """
         assert len(box_cls) == len(image_sizes)
         results = []
-
+        #breakpoint()
+        #print(box_cls.shape)
         # box_cls.shape: 1, 300, 80
         # box_pred.shape: 1, 300, 4
+        #breakpoint()
         prob = box_cls.sigmoid()
-        topk_values, topk_indexes = torch.topk(
-            prob.view(box_cls.shape[0], -1), self.select_box_nums_for_evaluation, dim=1
-        )
-        # highest probability score for each query detection, 300
-        scores = topk_values
-        topk_boxes = torch.div(topk_indexes, box_cls.shape[2], rounding_mode="floor")
-        labels = topk_indexes % box_cls.shape[2]
-
-        # If the scores aren't high enough, we convert the label to unknown
-        # unknown_label = 80
-        # unknown_threshold = 0.5
-        # for i in range(300):
-        #     if scores[0][i] < unknown_threshold:
-        #         labels[0][i] = unknown_label
-
-        boxes = torch.gather(box_pred, 1, topk_boxes.unsqueeze(-1).repeat(1, 1, 4))
-
+        prob_scores = [x[0] for x in prob[0]]
+        boxes = box_pred[0]
+        # if len(picked_boxes > self.select_box_nums_for_evaluation):
+            # break
+        picked_boxes, picked_scores = None, None
+        for thresh in range(1, 10):
+            #print(1 - thresh / 20)
+            picked_boxes, picked_scores = self.nms(boxes, prob_scores, 1 - thresh / 10)
+            #print(len(picked_boxes))
+            if len(picked_boxes) <= self.select_box_nums_for_evaluation:
+                break
+        #breakpoint()
+        # topk_values, topk_indexes = torch.topk(
+        #     prob.view(box_cls.shape[0], -1), self.select_box_nums_for_evaluation, dim=1
+        # )
+        # # highest probability score for each query detection, 300
+        # scores = topk_values
+        # topk_boxes = torch.div(topk_indexes, box_cls.shape[2], rounding_mode="floor")
+        # labels = topk_indexes % box_cls.shape[2]
+        #
+        # boxes = torch.gather(box_pred, 1, topk_boxes.unsqueeze(-1).repeat(1, 1, 4))
+        #breakpoint()
+        scores = torch.tensor(picked_scores, device=self.device).clone().detach()
+        scores = scores.reshape((1, len(picked_boxes)))
+        labels = torch.zeros((1, len(picked_scores)), device=self.device)
+        boxes = torch.stack(picked_boxes).reshape((1, len(picked_boxes), 4))
+        boxes = boxes.clone().detach()
         # For each box we assign the best class or the second best if the best on is `no_object`.
         # scores, labels = F.softmax(box_cls, dim=-1)[:, :, :-1].max(-1)
 
@@ -734,7 +812,7 @@ class DINO(nn.Module):
             result.scores = scores_per_image
             result.pred_classes = labels_per_image
             results.append(result)
-            #breakpoint()
+        #breakpoint()
         return results
 
     def prepare_targets(self, targets):

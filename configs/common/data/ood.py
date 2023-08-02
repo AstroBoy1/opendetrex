@@ -73,7 +73,7 @@ register_pascal_voc("towod_test", dir, "test", 2007, ALL_CLASSES)
 
 # Augmentations to apply to the training data
 dataloader.train = L(build_detection_train_loader)(
-    dataset=L(get_detection_dataset_dicts)(names="towod_t1"),
+    dataset=L(get_detection_dataset_dicts)(names="towod_t2"),
     mapper=L(DetrDatasetMapper)(
         augmentation=[
             L(T.RandomFlip)(),
