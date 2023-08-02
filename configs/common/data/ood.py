@@ -65,6 +65,7 @@ dir = "../PROB/data/VOC2007"
 register_pascal_voc("debug", dir, "debug", 2007, ALL_CLASSES)
 register_pascal_voc("towod_t1", dir, "owod_t1_train", 2007, ALL_CLASSES)
 register_pascal_voc("towod_t2", dir, "owod_t2_train", 2007, ALL_CLASSES)
+register_pascal_voc("towod_t2_sample", dir, "owod_t2_train_sample", 2007, ALL_CLASSES)
 register_pascal_voc("towod_t3", dir, "owod_t3_train", 2007, ALL_CLASSES)
 register_pascal_voc("towod_t4", dir, "owod_t4_train", 2007, ALL_CLASSES)
 

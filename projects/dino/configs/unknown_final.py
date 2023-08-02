@@ -8,8 +8,9 @@ lr_multiplier = get_config("common/coco_schedule.py").lr_multiplier_12ep
 train = get_config("common/train.py").train
 
 # modify training config
-train.init_checkpoint = "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
-train.output_dir = "./output/t1/unknown/dino_pretrained_color_bilateral_edges/"
+#train.init_checkpoint = "detectron2://ImageNetPretrained/torchvision/R-50.pkl"
+train.init_checkpoint = "./output/t1/unknown/dino_pretrained_color_bilateral_edges/model_0034999.pth"
+train.output_dir = "./output/t1/unknown/dino_pretrained_color_bilateral_edges2/"
 
 # modify model config
 # use the original implementation of dab-detr position embedding in 24 epochs training.
@@ -74,7 +75,7 @@ optimizer.weight_decay = 1e-4
 optimizer.params.lr_factor_func = lambda module_name: 0.1 if "backbone" in module_name else 1
 
 # modify dataloader config
-dataloader.train.num_workers = 16
+dataloader.train.num_workers = 4
 
 # Powers of 2
 # please notice that this is total batch size.

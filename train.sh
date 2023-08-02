@@ -2,4 +2,4 @@
 #                           --dist-url tcp://127.0.0.1:12345
 
 python tools/train_net.py --config-file projects/dino/configs/unknown_final.py \
-                          --num-gpus 2
+                          --num-gpus 1

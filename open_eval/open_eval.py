@@ -97,18 +97,18 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
 
         unknown_class_index = 80
         ONLY_PREDICT = False
-        PREVIOUS_KNOWN = 0
+        PREVIOUS_KNOWN = 20
         NUM_CLASSES = PREVIOUS_KNOWN + 20
-        UNKNOWN = True
+        UNKNOWN = False
         SAVE_SCORES = False
         # For f1 pseudo calculation
-        SAVE_ALL_SCORES = False
+        SAVE_ALL_SCORES = True
 
         UPPER_THRESH = 100
-        PSEUDO_LABEL_KNOWN = False
+        PSEUDO_LABEL_KNOWN = True
         if PSEUDO_LABEL_KNOWN:
             UPPER_THRESH = 55
-        SINGLE_BRANCH = True
+        SINGLE_BRANCH = False
         known_removal = True
         predict_fn = "predictions/t1/known_dual_test.pickle"
         tpfp_fn = "t2_known_tpfp_scores.csv"
@@ -194,7 +194,12 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
             else:
                 ret = OrderedDict()
                 unknown_recall_50 = 0
-                for cls_id, cls_name in enumerate(self._class_names[:NUM_CLASSES+1]):
+                start_index = 0
+                # Use previous class f scores
+                # randomly sample 1000 for tpfp generation
+                if SAVE_ALL_SCORES:
+                    start_index = PREVIOUS_KNOWN
+                for cls_id, cls_name in enumerate(self._class_names[start_index:NUM_CLASSES]):
                     #print(cls_id)
                     #breakpoint()
                     if cls_id == NUM_CLASSES:
@@ -227,7 +232,10 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                             aps[thresh].append(ap * 100)
                         if thresh == 50 and cls_id == unknown_class_index:
                             unknown_recall_50 = rec[-1]
-                    #breakpoint()
+                    if cls_id == PREVIOUS_KNOWN - 1:
+                        map_prev = {iou: np.mean(x) for iou, x in aps.items()}
+                        ret["bbox_prev"] = {"AP": np.mean(list(map_prev.values())),
+                                            "AP50": map_prev[50]}
                     if SAVE_ALL_SCORES:
                         self.df["classes"] = self.df_classes
                         self.df["probs"] = self.df_probs
@@ -235,10 +243,6 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         self.df.to_csv(tpfp_fn)
                         print("saved tpfp scores")
                         return
-                    if cls_id == PREVIOUS_KNOWN - 1:
-                        map_prev = {iou: np.mean(x) for iou, x in aps.items()}
-                        ret["bbox_prev"] = {"AP": np.mean(list(map_prev.values())),
-                                            "AP50": map_prev[50], "AP75": map_prev[75]}
                 map_current = np.mean(aps[50][PREVIOUS_KNOWN:NUM_CLASSES])
                 ret["bbox_current"] = {"AP50": map_current}
                 mAP = {iou: np.mean(x) for iou, x in aps.items()}
