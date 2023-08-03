@@ -78,8 +78,8 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
         class_names: list or tuple of class names
     """
     
-    UNKNOWN = True
-    PREV_KNOWN = 0
+    UNKNOWN = False
+    PREV_KNOWN = 40
     EXEMPLAR = False
     PSEUDO = False
     NUM_CLASSES = PREV_KNOWN + 20
@@ -97,8 +97,10 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
         for ef in exemplar_files:
             exemplar_set.add(ef.rstrip())
     pseudo_file_set = set()
+    pfs_fn = "pseudo_files_set.pickle"
+    pfs_fn = "pseudo_files_set_t2.pickle"
     if PSEUDO:
-        with open("pseudo_files_set.pickle", "rb") as fp:
+        with open(pfs_fn, "rb") as fp:
             pseudo_file_set = pickle.load(fp)
     exemplar_class_counts = defaultdict(int)
     for fileid in fileids:

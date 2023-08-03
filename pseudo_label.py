@@ -1,4 +1,4 @@
-# Pseudolabelling file, save t1 model predictions on t2 for t2
+# Pseudolabelling file, save model predictions for new task
 # incremental learning
 
 import xml.etree.ElementTree as ET
@@ -9,6 +9,19 @@ from collections import defaultdict
 t1_classes = set(["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
               "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa",
               "train", "tvmonitor"])
+
+t2_classes = set([
+    "truck", "traffic light", "fire hydrant", "stop sign", "parking meter",
+    "bench", "elephant", "bear", "zebra", "giraffe",
+    "backpack", "umbrella", "handbag", "tie", "suitcase",
+    "microwave", "oven", "toaster", "sink", "refrigerator"
+])
+
+T3_CLASS_NAMES = set([
+    "frisbee", "skis", "snowboard", "sports ball", "kite",
+    "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket",
+    "banana", "apple", "sandwich", "orange", "broccoli",
+    "carrot", "hot dog", "pizza", "donut", "cake"])
 
 VOC_CLASS_NAMES_COCOFIED = set([
     "airplane",  "dining table", "motorcycle",
@@ -21,16 +34,17 @@ def main():
     image_box_hash = defaultdict(list)
     image_class_hash = defaultdict(list)
     for class_name in t1_classes:
-        with open("pseudolabels/t2/known_50/boxes_{}.pickle".format(class_name), "rb") as fp:
+        with open("pseudolabels/t3/known/boxes_{}.pickle".format(class_name), "rb") as fp:
             box_hash = pickle.load(fp)
             for k, v in box_hash.items():
                 image_box_hash[k].append(v[0])
                 image_class_hash[k].append(class_name)
     keys = set(image_box_hash.keys())
-    # with open("pseudo_files_set.pickle", "wb") as fp:
-    #     pickle.dump(keys, fp)
-    # breakpoint()
-    # return
+    # Save the image ids that contain pseudolabels for the loading of labels
+    # Some images may not have any predictions so did not have the previous object labels removed
+    # We make an exception for previous object labels that are pseudo labels in pascal_voc_coco.py
+    with open("pseudo_files_set_t2.pickle", "wb") as fp:
+        pickle.dump(keys, fp)
     for count, image_id in enumerate(image_box_hash.keys()):
         if count % 1000 == 0:
             print(count)
@@ -49,7 +63,7 @@ def save_pseudo(image_id, pseudo_boxes, out_dr, class_names):
     #breakpoint()
     # Remove the annotations for previous classes by setting it as unknown
     for object in root.iter('name'):
-        if object.text in t1_classes or object.text in VOC_CLASS_NAMES_COCOFIED:
+        if object.text in t1_classes or object.text in VOC_CLASS_NAMES_COCOFIED or object.text in t2_classes:
             object.text = "unknown"
     for box, class_name in zip(pseudo_boxes, class_names):
         object_el = ET.SubElement(root, 'object')

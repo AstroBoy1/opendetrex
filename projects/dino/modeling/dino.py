@@ -584,11 +584,11 @@ class DINO(nn.Module):
             dn_metas["output_known_lbs_bboxes"] = out
         return outputs_class, outputs_coord
 
-    def preprocess_image(self, batched_inputs, edges_only=True, gray_only=True):
+    def preprocess_image(self, batched_inputs, edges_only=False, gray_only=False):
         """GPU Gaussian followed by Sobel"""
         # # [Batch size, num_channels, height, width]
-        rgb_only = False
-        bilateral = True
+        rgb_only = True
+        bilateral = False
         fourier = False
         frequency = False
         if rgb_only:
@@ -665,26 +665,6 @@ class DINO(nn.Module):
         images = ImageList.from_tensors(images)
         return images
 
-
-    def preprocess_image2(self, batched_inputs):
-        # # [Batch size, num_channels, height, width]
-        # Add canny edges to the 4th channel, without normalization
-        #import time
-        #start = time.time()
-        images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
-        for index, im in enumerate(batched_inputs):
-            im_tensor = im["image"]
-            gray_im = transforms.Grayscale()(im_tensor)
-            # canny works on one gpu, but with two needs to cpu
-            canny_edges = cv.Canny(np.array(gray_im[0].cpu()),100,200) # np cv array
-            canny_reshaped = canny_edges.reshape(1, canny_edges.shape[0], canny_edges.shape[1])
-            images[index] = torch.cat([images[index], torch.from_numpy(canny_reshaped).to(self.device)], dim=0)
-        images = ImageList.from_tensors(images)
-        #end = time.time()
-        #print(end - start)
-        #breakpoint()
-        return images
-
     def inference(self, box_cls, box_pred, image_sizes):
         """
         Arguments:
@@ -712,13 +692,6 @@ class DINO(nn.Module):
         topk_boxes = torch.div(topk_indexes, box_cls.shape[2], rounding_mode="floor")
         labels = topk_indexes % box_cls.shape[2]
 
-        # If the scores aren't high enough, we convert the label to unknown
-        # unknown_label = 80
-        # unknown_threshold = 0.5
-        # for i in range(300):
-        #     if scores[0][i] < unknown_threshold:
-        #         labels[0][i] = unknown_label
-
         boxes = torch.gather(box_pred, 1, topk_boxes.unsqueeze(-1).repeat(1, 1, 4))
 
         # For each box we assign the best class or the second best if the best on is `no_object`.
@@ -734,7 +707,6 @@ class DINO(nn.Module):
             result.scores = scores_per_image
             result.pred_classes = labels_per_image
             results.append(result)
-            #breakpoint()
         return results
 
     def prepare_targets(self, targets):

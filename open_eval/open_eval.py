@@ -97,7 +97,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
 
         unknown_class_index = 80
         ONLY_PREDICT = False
-        PREVIOUS_KNOWN = 20
+        PREVIOUS_KNOWN = 40
         NUM_CLASSES = PREVIOUS_KNOWN + 20
         UNKNOWN = False
         SAVE_SCORES = False
@@ -105,7 +105,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         SAVE_ALL_SCORES = False
 
         UPPER_THRESH = 100
-        PSEUDO_LABEL_KNOWN = True
+        PSEUDO_LABEL_KNOWN = False
         if PSEUDO_LABEL_KNOWN:
             UPPER_THRESH = 55
         SINGLE_BRANCH = False
@@ -221,13 +221,12 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                                 use_07_metric=self._is_2007, df_classes=self.df_classes,
                             df_probs=self.df_probs,
                             df_tp=self.df_tp,
-                            df_save=SAVE_ALL_SCORES, unknown=False, pseudo_knowns=True
+                            df_save=SAVE_ALL_SCORES, unknown=False, pseudo_knowns=PSEUDO_LABEL_KNOWN
                             )
                         if cls_id != unknown_class_index:
                             aps[thresh].append(ap * 100)
                         if thresh == 50 and cls_id == unknown_class_index:
                             unknown_recall_50 = rec[-1]
-                    #breakpoint()
                     if cls_id == PREVIOUS_KNOWN - 1:
                         map_prev = {iou: np.mean(x) for iou, x in aps.items()}
                         ret["bbox_prev"] = {"AP": np.mean(list(map_prev.values())),
@@ -832,51 +831,25 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
                 df_classes.append(classname)
             fp[d] = 1.0
         if PSEUDO_KNOWNS:
-            class_threshold = 0.5
+            class_threshold = 0.1
             if sorted_conf[d] >= class_threshold:
                 image_id_boxes[image_ids[d]].append(bb)
                 image_id_scores[image_ids[d]].append(sorted_conf[d])
-        if PSEUDO_KNOWNS:
-            image_ids_nms_boxes = {}
-            image_ids_nms_scores = {}
-            for key in image_id_boxes.keys():
-                bounding_boxes = image_id_boxes[key]
-                confidence_score = np.array(image_id_scores[key])
-                picked_boxes, picked_score = nms(bounding_boxes, confidence_score, threshold=ovthresh)
-                image_ids_nms_boxes[key] = picked_boxes
-                image_ids_nms_scores[key] = picked_score
-            # breakpoint()
-            with open("pseudolabels/t3/known/boxes_" + str(classname) + ".pickle", 'wb') as handle:
-                pickle.dump(image_ids_nms_boxes, handle)
-            with open("pseudolabels/t3/known/scores_" + str(classname) + ".pickle", 'wb') as handle:
-                pickle.dump(image_ids_nms_scores, handle)
-            print(classname, npos, len(image_ids_nms_boxes))
-            # with open("pseudolabels/t2/known/tpscores_" + str(classname) + ".pickle", 'wb') as handle:
-            #     pickle.dump(class_scores, handle)
-            print("saved pseudo knowns")
-        #if tp[d] == 0:
-            # Add the bounding box prediction if there was no ground truth overlap
-
-            # image_id_boxes[image_ids[d]].append(bb)
-            # image_id_scores[image_ids[d]].append(sorted_conf[d])
-    # image_ids_nms_boxes = {}
-    # image_ids_nms_scores = {}
-    # for key in image_id_boxes.keys():
-    #     bounding_boxes = image_id_boxes[key]
-    #     #bounding_boxes = [(187, 82, 337, 317), (150, 67, 305, 282), (246, 121, 368, 304)]
-    #     #confidence_score = [0.9, 0.75, 0.8]
-    #     confidence_score = np.array(image_id_scores[key])
-    #     picked_boxes, picked_score = nms(bounding_boxes, confidence_score, threshold=ovthresh)
-    #     image_ids_nms_boxes[key] = picked_boxes
-    #     image_ids_nms_scores[key] = picked_score
-    # with open('pseudolabels/boxes.pickle', 'wb') as handle:
-    #     pickle.dump(image_ids_nms_boxes, handle)
-    # with open('pseudolabels/scores.pickle', 'wb') as handle:
-    #     pickle.dump(image_ids_nms_scores, handle)
-    # with open('pseudolabels/scores.pickle', 'rb') as handle:
-    #     bp = pickle.load(handle)
-    #     print(image_ids_nms_scores == bp)
-    # return
+    if PSEUDO_KNOWNS:
+        image_ids_nms_boxes = {}
+        image_ids_nms_scores = {}
+        for key in image_id_boxes.keys():
+            bounding_boxes = image_id_boxes[key]
+            confidence_score = np.array(image_id_scores[key])
+            picked_boxes, picked_score = nms(bounding_boxes, confidence_score, threshold=ovthresh)
+            image_ids_nms_boxes[key] = picked_boxes
+            image_ids_nms_scores[key] = picked_score
+        with open("pseudolabels/t3/known/boxes_" + str(classname) + ".pickle", 'wb') as handle:
+            pickle.dump(image_ids_nms_boxes, handle)
+        with open("pseudolabels/t3/known/scores_" + str(classname) + ".pickle", 'wb') as handle:
+            pickle.dump(image_ids_nms_scores, handle)
+        print(classname, npos, len(image_ids_nms_boxes))
+        print("saved pseudo knowns")
 
     # compute precision recall
     fp = np.cumsum(fp)
