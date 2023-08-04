@@ -673,25 +673,6 @@ class DINO(nn.Module):
         return images
 
 
-    def preprocess_image2(self, batched_inputs):
-        # # [Batch size, num_channels, height, width]
-        # Add canny edges to the 4th channel, without normalization
-        #import time
-        #start = time.time()
-        images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
-        for index, im in enumerate(batched_inputs):
-            im_tensor = im["image"]
-            gray_im = transforms.Grayscale()(im_tensor)
-            # canny works on one gpu, but with two needs to cpu
-            canny_edges = cv.Canny(np.array(gray_im[0].cpu()),100,200) # np cv array
-            canny_reshaped = canny_edges.reshape(1, canny_edges.shape[0], canny_edges.shape[1])
-            images[index] = torch.cat([images[index], torch.from_numpy(canny_reshaped).to(self.device)], dim=0)
-        images = ImageList.from_tensors(images)
-        #end = time.time()
-        #print(end - start)
-        #breakpoint()
-        return images
-
     def nms(self, bounding_boxes, confidence_score, threshold):
         # If no bounding boxes, return empty list
         if len(bounding_boxes) == 0:
@@ -766,8 +747,6 @@ class DINO(nn.Module):
         """
         assert len(box_cls) == len(image_sizes)
         results = []
-        #breakpoint()
-        #print(box_cls.shape)
         # box_cls.shape: 1, 300, 80
         # box_pred.shape: 1, 300, 4
         #breakpoint()

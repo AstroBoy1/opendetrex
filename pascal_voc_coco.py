@@ -67,6 +67,34 @@ VOC_COCO_CLASS_NAMES = {}
 # Used for the original dataset benchmark
 VOC_COCO_CLASS_NAMES["TOWOD"] = tuple(itertools.chain(VOC_CLASS_NAMES, T2_CLASS_NAMES, T3_CLASS_NAMES, T4_CLASS_NAMES, UNK_CLASS))
 
+OWDETR_T1_CLASS_NAMES = [
+    "aeroplane","bicycle","bird","boat","bus","car",
+    "cat","cow","dog","horse","motorbike","sheep","train",
+    "elephant","bear","zebra","giraffe","truck","person"
+]
+
+OWDETR_T2_CLASS_NAMES = [
+    "traffic light","fire hydrant","stop sign",
+    "parking meter","bench","chair","diningtable",
+    "pottedplant","backpack","umbrella","handbag",
+    "tie","suitcase","microwave","oven","toaster","sink",
+    "refrigerator","bed","toilet","sofa"
+]
+
+OWDETR_T3_CLASS_NAMES = [
+    "frisbee","skis","snowboard","sports ball",
+    "kite","baseball bat","baseball glove","skateboard",
+    "surfboard","tennis racket","banana","apple","sandwich",
+    "orange","broccoli","carrot","hot dog","pizza","donut","cake"
+]
+
+OWDETR_T4_CLASS_NAMES = [
+    "laptop","mouse","remote","keyboard","cell phone","book",
+    "clock","vase","scissors","teddy bear","hair drier","toothbrush",
+    "wine glass","cup","fork","knife","spoon","bowl","tvmonitor","bottle"
+]
+
+VOC_COCO_CLASS_NAMES["OWDETR"] = tuple(itertools.chain(OWDETR_T1_CLASS_NAMES, OWDETR_T2_CLASS_NAMES, OWDETR_T3_CLASS_NAMES, OWDETR_T4_CLASS_NAMES, UNK_CLASS))
 
 def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], Tuple[str, ...]]):
     """
@@ -138,15 +166,10 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             cid = class_names.index(cls)
             # 1 for unknown
             if UNKNOWN:
-                if cid >= NUM_CLASSES:
-                    continue
-                    cid = 1
-                # 0 for known
-                else:
-                    cid = 0
-                instances.append(
-                    {"category_id": cid, "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
-                )
+                if cid < NUM_CLASSES:
+                    instances.append(
+                        {"category_id": 0, "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
+                    )
             else:
                 # Only add a label if it's a known object
                 if cid < NUM_CLASSES:

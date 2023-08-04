@@ -109,7 +109,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         if PSEUDO_LABEL_KNOWN:
             UPPER_THRESH = 55
         SINGLE_BRANCH = True
-        known_removal = True
+        known_removal = False
         predict_fn = "predictions/t2/known_dual_test.pickle"
         tpfp_fn = "t2_known_tpfp_scores.csv"
 
@@ -624,29 +624,6 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
                     fp[d] = 1.0
         else:
             fp[d] = 1.0
-        #if tp[d] == 0:
-            # Add the bounding box prediction if there was no ground truth overlap
-
-            # image_id_boxes[image_ids[d]].append(bb)
-            # image_id_scores[image_ids[d]].append(sorted_conf[d])
-    # image_ids_nms_boxes = {}
-    # image_ids_nms_scores = {}
-    # for key in image_id_boxes.keys():
-    #     bounding_boxes = image_id_boxes[key]
-    #     #bounding_boxes = [(187, 82, 337, 317), (150, 67, 305, 282), (246, 121, 368, 304)]
-    #     #confidence_score = [0.9, 0.75, 0.8]
-    #     confidence_score = np.array(image_id_scores[key])
-    #     picked_boxes, picked_score = nms(bounding_boxes, confidence_score, threshold=ovthresh)
-    #     image_ids_nms_boxes[key] = picked_boxes
-    #     image_ids_nms_scores[key] = picked_score
-    # with open('pseudolabels/boxes.pickle', 'wb') as handle:
-    #     pickle.dump(image_ids_nms_boxes, handle)
-    # with open('pseudolabels/scores.pickle', 'wb') as handle:
-    #     pickle.dump(image_ids_nms_scores, handle)
-    # with open('pseudolabels/scores.pickle', 'rb') as handle:
-    #     bp = pickle.load(handle)
-    #     print(image_ids_nms_scores == bp)
-    # return
 
     # compute precision recall
     fp = np.cumsum(fp)
