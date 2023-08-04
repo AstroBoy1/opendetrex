@@ -79,7 +79,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     """
     
     UNKNOWN = False
-    PREV_KNOWN = 40
+    PREV_KNOWN = 0
     EXEMPLAR = False
     PSEUDO = False
     NUM_CLASSES = PREV_KNOWN + 20
@@ -140,15 +140,11 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             cid = class_names.index(cls)
             # 1 for unknown
             if UNKNOWN:
-                if cid >= NUM_CLASSES:
-                    continue
-                    cid = 1
-                # 0 for known
-                else:
+                if cid < NUM_CLASSES:
                     cid = 0
-                instances.append(
-                    {"category_id": cid, "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
-                )
+                    instances.append(
+                        {"category_id": cid, "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
+                    )
             else:
                 # Only add a label if it's a known object
                 if cid < NUM_CLASSES:

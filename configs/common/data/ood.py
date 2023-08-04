@@ -57,8 +57,38 @@ VOC_COCO_CLASS_NAMES = {}
 ALL_CLASSES = tuple(itertools.chain(VOC_CLASS_NAMES, T2_CLASS_NAMES, T3_CLASS_NAMES, T4_CLASS_NAMES, UNK_CLASS))
 VOC_COCO_CLASS_NAMES["TOWOD"] = VOC_CLASS_NAMES
 
-#dir = "../PROB/data/VOC2007"
-dir = "pseudolabels/t3"
+OWDETR_T1_CLASS_NAMES = [
+    "aeroplane","bicycle","bird","boat","bus","car",
+    "cat","cow","dog","horse","motorbike","sheep","train",
+    "elephant","bear","zebra","giraffe","truck","person"
+]
+
+OWDETR_T2_CLASS_NAMES = [
+    "traffic light","fire hydrant","stop sign",
+    "parking meter","bench","chair","diningtable",
+    "pottedplant","backpack","umbrella","handbag",
+    "tie","suitcase","microwave","oven","toaster","sink",
+    "refrigerator","bed","toilet","sofa"
+]
+
+OWDETR_T3_CLASS_NAMES = [
+    "frisbee","skis","snowboard","sports ball",
+    "kite","baseball bat","baseball glove","skateboard",
+    "surfboard","tennis racket","banana","apple","sandwich",
+    "orange","broccoli","carrot","hot dog","pizza","donut","cake"
+]
+
+OWDETR_T4_CLASS_NAMES = [
+    "laptop","mouse","remote","keyboard","cell phone","book",
+    "clock","vase","scissors","teddy bear","hair drier","toothbrush",
+    "wine glass","cup","fork","knife","spoon","bowl","tvmonitor","bottle"
+]
+
+VOC_COCO_CLASS_NAMES["OWDETR"] = tuple(itertools.chain(OWDETR_T1_CLASS_NAMES, OWDETR_T2_CLASS_NAMES, OWDETR_T3_CLASS_NAMES, OWDETR_T4_CLASS_NAMES, UNK_CLASS))
+
+
+dir = "../PROB/data/VOC2007"
+#dir = "pseudolabels/t3"
 
 # Directories that specify the name of the files that contain which images
 # to use for training and testing
@@ -71,9 +101,15 @@ register_pascal_voc("towod_t4", dir, "owod_t4_train", 2007, ALL_CLASSES)
 
 register_pascal_voc("towod_test", dir, "test", 2007, ALL_CLASSES)
 
+register_pascal_voc("owdetr_t1", dir, "owdetr_t1_train", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
+register_pascal_voc("owdetr_t2", dir, "owdetr_t2_train", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
+register_pascal_voc("owdetr_t3", dir, "owdetr_t3_train", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
+register_pascal_voc("owdetr_t4", dir, "owdetr_t4_train", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
+register_pascal_voc("owdetr_test", dir, "owdetr_test", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
+
 # Augmentations to apply to the training data
 dataloader.train = L(build_detection_train_loader)(
-    dataset=L(get_detection_dataset_dicts)(names="towod_t3"),
+    dataset=L(get_detection_dataset_dicts)(names="owdetr_t1"),
     mapper=L(DetrDatasetMapper)(
         augmentation=[
             L(T.RandomFlip)(),
@@ -165,7 +201,7 @@ dataloader.train = L(build_detection_train_loader)(
 
 # Augmentations to apply to the test data
 dataloader.test = L(build_detection_test_loader)(
-    dataset=L(get_detection_dataset_dicts)(names="towod_test", filter_empty=False),
+    dataset=L(get_detection_dataset_dicts)(names="owdetr_test", filter_empty=False),
     mapper=L(DetrDatasetMapper)(
         augmentation=[
             L(T.ResizeShortestEdge)(

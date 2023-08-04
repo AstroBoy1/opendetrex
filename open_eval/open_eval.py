@@ -97,7 +97,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
 
         unknown_class_index = 80
         ONLY_PREDICT = False
-        PREVIOUS_KNOWN = 40
+        PREVIOUS_KNOWN = 0
         NUM_CLASSES = PREVIOUS_KNOWN + 20
         UNKNOWN = False
         SAVE_SCORES = False
@@ -114,7 +114,6 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         tpfp_fn = "t2_known_tpfp_scores.csv"
 
         all_predictions = comm.gather(self._predictions, dst=0)
-        #breakpoint()
         # list containing dictionary of keys with classes and values predictions
         # each prediction contains [image id, score, xmin, ymin, xmax, ymax
         if ONLY_PREDICT:
