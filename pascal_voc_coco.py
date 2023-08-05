@@ -79,9 +79,9 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     """
     
     UNKNOWN = False
-    PREV_KNOWN = 0
+    PREV_KNOWN = 40
     EXEMPLAR = False
-    PSEUDO = False
+    PSEUDO = True
     NUM_CLASSES = PREV_KNOWN + 20
 
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:

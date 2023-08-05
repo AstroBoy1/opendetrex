@@ -87,8 +87,8 @@ OWDETR_T4_CLASS_NAMES = [
 VOC_COCO_CLASS_NAMES["OWDETR"] = tuple(itertools.chain(OWDETR_T1_CLASS_NAMES, OWDETR_T2_CLASS_NAMES, OWDETR_T3_CLASS_NAMES, OWDETR_T4_CLASS_NAMES, UNK_CLASS))
 
 
-dir = "../PROB/data/VOC2007"
-#dir = "pseudolabels/t3"
+#dir = "../PROB/data/VOC2007"
+dir = "pseudolabels/t3"
 
 # Directories that specify the name of the files that contain which images
 # to use for training and testing
@@ -109,7 +109,7 @@ register_pascal_voc("owdetr_test", dir, "owdetr_test", 2007, VOC_COCO_CLASS_NAME
 
 # Augmentations to apply to the training data
 dataloader.train = L(build_detection_train_loader)(
-    dataset=L(get_detection_dataset_dicts)(names="owdetr_t1"),
+    dataset=L(get_detection_dataset_dicts)(names="towod_t3"),
     mapper=L(DetrDatasetMapper)(
         augmentation=[
             L(T.RandomFlip)(),
