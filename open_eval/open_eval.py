@@ -114,7 +114,6 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         tpfp_fn = "t2_known_tpfp_scores.csv"
 
         all_predictions = comm.gather(self._predictions, dst=0)
-        #breakpoint()
         # list containing dictionary of keys with classes and values predictions
         # each prediction contains [image id, score, xmin, ymin, xmax, ymax
         if ONLY_PREDICT:
@@ -166,7 +165,6 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                 for cls_id, cls_name in enumerate(self._class_names[1:2]):
                     cls_id = 0
                     cls_name = "aeroplane"
-                    # Put all the predictions together
                     lines = predictions.get(cls_id, [""])
                     with open(res_file_template.format(cls_name), "w") as f:
                         f.write("\n".join(lines))
@@ -480,7 +478,7 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
     }
 
     #T4_CLASS_NAMES.update(T3_CLASS_NAMES)
-    T4_CLASS_NAMES.update(T2_CLASS_NAMES)
+    #T4_CLASS_NAMES.update(T2_CLASS_NAMES)
 
     OWDETR_T1_CLASS_NAMES = {
         "aeroplane","bicycle","bird","boat","bus","car",
@@ -511,7 +509,7 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
 
     #breakpoint()
     #unknown_classes.update(T4_CLASS_NAMES)
-    OWDETR_T4_CLASS_NAMES.update(OWDETR_T3_CLASS_NAMES)
+    #OWDETR_T4_CLASS_NAMES.update(OWDETR_T3_CLASS_NAMES)
 
     # first load gt
     # read list of images

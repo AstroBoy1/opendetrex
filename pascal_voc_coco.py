@@ -67,12 +67,14 @@ VOC_COCO_CLASS_NAMES = {}
 # Used for the original dataset benchmark
 VOC_COCO_CLASS_NAMES["TOWOD"] = tuple(itertools.chain(VOC_CLASS_NAMES, T2_CLASS_NAMES, T3_CLASS_NAMES, T4_CLASS_NAMES, UNK_CLASS))
 
+# 19 classes
 OWDETR_T1_CLASS_NAMES = [
     "aeroplane","bicycle","bird","boat","bus","car",
     "cat","cow","dog","horse","motorbike","sheep","train",
     "elephant","bear","zebra","giraffe","truck","person"
 ]
 
+#21 classes
 OWDETR_T2_CLASS_NAMES = [
     "traffic light","fire hydrant","stop sign",
     "parking meter","bench","chair","diningtable",
@@ -81,6 +83,7 @@ OWDETR_T2_CLASS_NAMES = [
     "refrigerator","bed","toilet","sofa"
 ]
 
+#20 classes
 OWDETR_T3_CLASS_NAMES = [
     "frisbee","skis","snowboard","sports ball",
     "kite","baseball bat","baseball glove","skateboard",
@@ -88,6 +91,7 @@ OWDETR_T3_CLASS_NAMES = [
     "orange","broccoli","carrot","hot dog","pizza","donut","cake"
 ]
 
+#20 classes
 OWDETR_T4_CLASS_NAMES = [
     "laptop","mouse","remote","keyboard","cell phone","book",
     "clock","vase","scissors","teddy bear","hair drier","toothbrush",
@@ -107,7 +111,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     """
     
     UNKNOWN = True
-    PREV_KNOWN = 20
+    PREV_KNOWN = 40
     EXEMPLAR = False
     PSEUDO = False
     NUM_CLASSES = PREV_KNOWN + 20
@@ -166,7 +170,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             cid = class_names.index(cls)
             # 1 for unknown
             if UNKNOWN:
-                if cid < NUM_CLASSES:
+                if cid < NUM_CLASSES and cid >= PREV_KNOWN:
                     instances.append(
                         {"category_id": 0, "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
                     )
