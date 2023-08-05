@@ -594,16 +594,10 @@ class DINO(nn.Module):
         #breakpoint()
         rgb_only = False
         bilateral = False
-        fourier = False
-        frequency = False
         images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
         if rgb_only:
             images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
             return ImageList.from_tensors(images)
-        elif fourier:
-            images = [x["image"]for x in batched_inputs]
-        elif frequency:
-            images = [x["image"].to(self.device) for x in batched_inputs]
         elif bilateral:
             images = [x["image"] for x in batched_inputs]
         kernel_v = [[1, 0, -1],
@@ -633,27 +627,6 @@ class DINO(nn.Module):
                 filtered = cv.bilateralFilter(cpu_im, 9, 75, 75)
                 filtered = filtered.reshape(filtered.shape[2], filtered.shape[0], filtered.shape[1])
                 images[index] = self.normalizer(torch.from_numpy(filtered).to(self.device))
-                continue
-            elif frequency:
-                #breakpoint()
-                gray_im = transforms.Grayscale()(im).float()
-                smooth_img = F.conv2d(gray_im, gaussian_kernel, padding='same')
-                high_frequency = torch.sub(gray_im, smooth_img).to(self.device)
-                normalized_image = self.normalizer(im.to(self.device))
-                images[index] = torch.cat([normalized_image, high_frequency], dim=0)
-                continue
-            elif fourier:
-                #breakpoint()
-                im_normalized = self.normalizer(im.to(self.device))
-                fft_norm = abs(np.fft.fftn(im_normalized.cpu(), norm="ortho"))
-                #fftn = torch.fft.fftn(im, norm="forward")
-                #fftn = torch.fft.rfftn(im, norm="forward")
-                #batched_norm = torch.functorch.vmap(torch.norm)
-                #fftn_norm = batched_norm(fftn)
-                #fftn.apply_(lambda x: (torch.norm(x)))
-                #fft_amp = fftn[:, :, :, :, 0] ** 2 + fft_im[:, :, :, :, 1] ** 2
-                #fft_amp = torch.sqrt(fft_amp)  # this is the amplitude
-                images[index] = torch.cat([im_normalized, torch.from_numpy(fft_norm).float().to(self.device)], dim=0)
                 continue
             gray_im = transforms.Grayscale()(im)
             if gray_only:

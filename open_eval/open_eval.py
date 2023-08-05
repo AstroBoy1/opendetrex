@@ -185,10 +185,6 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         if thresh == 50 and cls_id == 0:
                             recs[50] = rec[-1]
                 ret = OrderedDict()
-                #mAP = {iou: np.mean(x) for iou, x in aps.items()}
-                # returns dictionary of keys(metrics) and values
-                # ret["bbox"] = {"AP": np.mean(list(mAP.values())), "AP50": mAP[50], "AP75": mAP[75],
-                #                "unknown_recall50": recs[50]}
                 ret["bbox"] = {"unknown_recall50": recs[50]}
                 return ret
             else:
@@ -462,8 +458,6 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
     # assumes annotations are in annopath.format(imagename)
     # assumes imagesetfile is a text file with each line an image name
 
-    #KNOWN_REMOVAL = False
-
     T2_CLASS_NAMES = {
         "truck", "traffic light", "fire hydrant", "stop sign", "parking meter",
         "bench", "elephant", "bear", "zebra", "giraffe",
@@ -485,8 +479,40 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
         "wine glass", "cup", "fork", "knife", "spoon", "bowl"
     }
 
-    T4_CLASS_NAMES.update(T3_CLASS_NAMES)
+    #T4_CLASS_NAMES.update(T3_CLASS_NAMES)
     T4_CLASS_NAMES.update(T2_CLASS_NAMES)
+
+    OWDETR_T1_CLASS_NAMES = {
+        "aeroplane","bicycle","bird","boat","bus","car",
+        "cat","cow","dog","horse","motorbike","sheep","train",
+        "elephant","bear","zebra","giraffe","truck","person"
+    }
+
+    OWDETR_T2_CLASS_NAMES = {
+        "traffic light","fire hydrant","stop sign",
+        "parking meter","bench","chair","diningtable",
+        "pottedplant","backpack","umbrella","handbag",
+        "tie","suitcase","microwave","oven","toaster","sink",
+        "refrigerator","bed","toilet","sofa"
+    }
+
+    OWDETR_T3_CLASS_NAMES = {
+        "frisbee","skis","snowboard","sports ball",
+        "kite","baseball bat","baseball glove","skateboard",
+        "surfboard","tennis racket","banana","apple","sandwich",
+        "orange","broccoli","carrot","hot dog","pizza","donut","cake"
+    }
+
+    OWDETR_T4_CLASS_NAMES = {
+        "laptop","mouse","remote","keyboard","cell phone","book",
+        "clock","vase","scissors","teddy bear","hair drier","toothbrush",
+        "wine glass","cup","fork","knife","spoon","bowl","tvmonitor","bottle"
+    }
+
+    #breakpoint()
+    #unknown_classes.update(T4_CLASS_NAMES)
+    OWDETR_T4_CLASS_NAMES.update(OWDETR_T3_CLASS_NAMES)
+
     # first load gt
     # read list of images
     with PathManager.open(imagesetfile, "r") as f:
@@ -508,16 +534,10 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
     # number of positive instances for the class
     npos = 0
     for imagename in imagenames:
-        #R = [obj for obj in recs[imagename] if obj["name"] == classname]
-        # Get only unknown rectangles
-        #if classname == "aeroplane":
-        R = [obj for obj in recs[imagename] if obj["name"] in T4_CLASS_NAMES]
+        R = [obj for obj in recs[imagename] if obj["name"] in OWDETR_T4_CLASS_NAMES]
         # Get known rectangles only for t1
-        # if classname == "aeroplane":
-        #     R = [obj for obj in recs[imagename] if obj["name"] not in T4_CLASS_NAMES]
         bbox = np.array([x["bbox"] for x in R])
         difficult = np.array([x["difficult"] for x in R]).astype(np.bool)
-        # difficult = np.array([False for x in R]).astype(np.bool)  # treat all "difficult" as GT
         det = [False] * len(R)
         npos = npos + sum(~difficult)
         class_recs[imagename] = {"bbox": bbox, "difficult": difficult, "det": det}
@@ -525,9 +545,6 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
     detfile = detpath.format(classname)
     with open(detfile, "r") as f:
         lines = f.readlines()
-    # lines = []
-    # for key in gph.keys():
-    #     lines.extend(gph[key])
     splitlines = [x.strip().split(" ") for x in lines]
     image_ids = [x[0] for x in splitlines]
     confidence = np.array([float(x[1]) for x in splitlines])
@@ -547,12 +564,7 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
     # 1 if not overlapping, used as a mask to select predictions that don't overlap with ground truth
     non_overlap_indices = np.array([True] * nd)
 
-    # For each image id key, value is a list of bounding boxes
-    image_id_boxes = defaultdict(list)
-    image_id_scores = defaultdict(list)
-
     known_hash = defaultdict(list)
-    #breakpoint()
     if known_removal:
         with open(known_pred_fn, 'rb') as handle:
             known_saved_hash = pickle.load(handle)
@@ -560,7 +572,6 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
                 for prediction in value:
                     known_hash[key].append([float(prediction[2]), float(prediction[3]), float(prediction[4]),
                                             float(prediction[5])])
-        #breakpoint()
     unknown_hash = defaultdict(list)
     for key, value in zip(image_ids, BB):
         unknown_hash[key].append(value)
@@ -600,7 +611,6 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
             overlaps = inters / uni
             ovmax = np.max(overlaps)
             jmax = np.argmax(overlaps)
-        #print("ovmax", ovmax)
         if ovmax > ovthresh:
             if not R["difficult"][jmax]:
                 if not R["det"][jmax]:

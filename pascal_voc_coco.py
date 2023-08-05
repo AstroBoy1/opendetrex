@@ -107,7 +107,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     """
     
     UNKNOWN = True
-    PREV_KNOWN = 0
+    PREV_KNOWN = 20
     EXEMPLAR = False
     PSEUDO = False
     NUM_CLASSES = PREV_KNOWN + 20
