@@ -152,7 +152,12 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
                     #     print("exemplar file")
                     # if fileid in pseudo_file_set:
                     #     count += 1
-                    if cid >= PREV_KNOWN or (cid < PREV_KNOWN and fileid in pseudo_file_set):
+                    # Already set the other classes to unknown
+                    if PSEUDO:
+                        instances.append(
+                            {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
+                        )
+                    if cid >= PREV_KNOWN or (cid < PREV_KNOWN and PSEUDO):
                         instances.append(
                             {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
                         )

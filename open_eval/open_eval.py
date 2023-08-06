@@ -102,16 +102,18 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         UNKNOWN = False
         SAVE_SCORES = False
         # For f1 pseudo calculation
-        SAVE_ALL_SCORES = False
+        SAVE_ALL_SCORES = True
 
         UPPER_THRESH = 100
+        if SAVE_ALL_SCORES:
+            UPPER_THRESH = 55
         PSEUDO_LABEL_KNOWN = False
         if PSEUDO_LABEL_KNOWN:
             UPPER_THRESH = 55
         SINGLE_BRANCH = False
         known_removal = True
         predict_fn = "predictions/t1/known_dual_test.pickle"
-        tpfp_fn = "t2_known_tpfp_scores.csv"
+        tpfp_fn = "owdetr_t1_tpfp_scores.csv"
 
         all_predictions = comm.gather(self._predictions, dst=0)
         # list containing dictionary of keys with classes and values predictions
@@ -194,7 +196,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                 ret = OrderedDict()
                 unknown_recall_50 = 0
                 for cls_id, cls_name in enumerate(self._class_names[:NUM_CLASSES]):
-                    print(cls_id)
+                    #print(cls_id)
                     #breakpoint()
                     if cls_id == NUM_CLASSES:
                         cls_id = unknown_class_index

@@ -39,17 +39,17 @@ def main():
             for k, v in box_hash.items():
                 image_box_hash[k].append(v[0])
                 image_class_hash[k].append(class_name)
-    keys = set(image_box_hash.keys())
+    #breakpoint()
+    #keys = set(image_box_hash.keys())
     # Save the image ids that contain pseudolabels for the loading of labels
     # Some images may not have any predictions so did not have the previous object labels removed
     # We make an exception for previous object labels that are pseudo labels in pascal_voc_coco.py
-    with open("pseudo_files_set_t2.pickle", "wb") as fp:
-        pickle.dump(keys, fp)
+    # with open("pseudo_files_set_t2.pickle", "wb") as fp:
+    #     pickle.dump(keys, fp)
     for count, image_id in enumerate(image_box_hash.keys()):
         if count % 1000 == 0:
             print(count)
         save_pseudo(image_id, image_box_hash[image_id], out_dr, image_class_hash[image_id])
-
 
 def save_pseudo(image_id, pseudo_boxes, out_dr, class_names):
     """save the pseudo data to xml files in an Annotation folder
@@ -57,12 +57,16 @@ def save_pseudo(image_id, pseudo_boxes, out_dr, class_names):
     # Add the object predictions to a new version of the xml file in out_dr
     # add pseudo labeled instances, and change t1 instances to unknown
     fn = "../PROB/data/VOC2007/Annotations/" + image_id + ".xml"
+    print(fn)
     tree = ET.parse(fn)
     root = tree.getroot()
+    print(len(pseudo_boxes), class_names)
     #print(fn, pseudo_boxes, class_names)
     #breakpoint()
     # Remove the annotations for previous classes by setting it as unknown
+    #breakpoint()
     for object in root.iter('name'):
+        print(object.text)
         if object.text in t1_classes or object.text in VOC_CLASS_NAMES_COCOFIED or object.text in t2_classes:
             object.text = "unknown"
     for box, class_name in zip(pseudo_boxes, class_names):
@@ -74,7 +78,8 @@ def save_pseudo(image_id, pseudo_boxes, out_dr, class_names):
         ET.SubElement(bb_el, 'xmax').text = str(round(box[2]))
         ET.SubElement(bb_el, 'ymax').text = str(round(box[3]))
         ET.SubElement(object_el, 'difficult').text = "0"
-    tree.write(out_dr + "/" + image_id + ".xml")
+    breakpoint()
+    #tree.write(out_dr + "/" + image_id + ".xml")
 
 
 if __name__ == "__main__":
