@@ -79,9 +79,9 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     """
     
     UNKNOWN = False
-    PREV_KNOWN = 40
-    EXEMPLAR = False
-    PSEUDO = True
+    PREV_KNOWN = 20
+    EXEMPLAR = True
+    PSEUDO = False
     NUM_CLASSES = PREV_KNOWN + 20
 
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:
@@ -157,11 +157,11 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
                         instances.append(
                             {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
                         )
-                    if cid >= PREV_KNOWN or (cid < PREV_KNOWN and PSEUDO):
+                    elif cid >= PREV_KNOWN or (cid < PREV_KNOWN and PSEUDO):
                         instances.append(
                             {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
                         )
-                    if EXEMPLAR:
+                    elif EXEMPLAR:
                     #if cid >= PREV_KNOWN or (cid < PREV_KNOWN and fileid in exemplar_set):
                         if cid < PREV_KNOWN and fileid in exemplar_set:
                             exemplar_class_counts[cid] += 1
@@ -170,11 +170,6 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
                                 instances.append(
                                     {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
                                 )
-                            else:
-                                continue
-                        instances.append(
-                            {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
-                        )
         r["annotations"] = instances
         dicts.append(r)
         # returns filename which is the full filepath, image_id which is just a string,

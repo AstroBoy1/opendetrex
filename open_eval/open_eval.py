@@ -97,12 +97,12 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
 
         unknown_class_index = 80
         ONLY_PREDICT = False
-        PREVIOUS_KNOWN = 40
+        PREVIOUS_KNOWN = 20
         NUM_CLASSES = PREVIOUS_KNOWN + 20
         UNKNOWN = False
         SAVE_SCORES = False
         # For f1 pseudo calculation
-        SAVE_ALL_SCORES = True
+        SAVE_ALL_SCORES = False
 
         UPPER_THRESH = 100
         if SAVE_ALL_SCORES:
@@ -111,7 +111,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         if PSEUDO_LABEL_KNOWN:
             UPPER_THRESH = 55
         SINGLE_BRANCH = False
-        known_removal = True
+        known_removal = False
         predict_fn = "predictions/t1/known_dual_test.pickle"
         tpfp_fn = "owdetr_t1_tpfp_scores.csv"
 
@@ -708,6 +708,34 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     T4_CLASS_NAMES.update(T2_CLASS_NAMES)
     # first load gt
     # read list of images
+
+    OWDETR_T1_CLASS_NAMES = {
+        "aeroplane", "bicycle", "bird", "boat", "bus", "car",
+        "cat", "cow", "dog", "horse", "motorbike", "sheep", "train",
+        "elephant", "bear", "zebra", "giraffe", "truck", "person"
+    }
+
+    OWDETR_T2_CLASS_NAMES = {
+        "traffic light", "fire hydrant", "stop sign",
+        "parking meter", "bench", "chair", "diningtable",
+        "pottedplant", "backpack", "umbrella", "handbag",
+        "tie", "suitcase", "microwave", "oven", "toaster", "sink",
+        "refrigerator", "bed", "toilet", "sofa"
+    }
+
+    OWDETR_T3_CLASS_NAMES = {
+        "frisbee", "skis", "snowboard", "sports ball",
+        "kite", "baseball bat", "baseball glove", "skateboard",
+        "surfboard", "tennis racket", "banana", "apple", "sandwich",
+        "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake"
+    }
+
+    OWDETR_T4_CLASS_NAMES = {
+        "laptop", "mouse", "remote", "keyboard", "cell phone", "book",
+        "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush",
+        "wine glass", "cup", "fork", "knife", "spoon", "bowl", "tvmonitor", "bottle"
+    }
+
     with PathManager.open(imagesetfile, "r") as f:
         lines = f.readlines()
     imagenames = [x.strip() for x in lines]
@@ -845,9 +873,9 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
             picked_boxes, picked_score = nms(bounding_boxes, confidence_score, threshold=ovthresh)
             image_ids_nms_boxes[key] = picked_boxes
             image_ids_nms_scores[key] = picked_score
-        with open("pseudolabels/t3/known/boxes_" + str(classname) + ".pickle", 'wb') as handle:
+        with open("pseudolabels/owdetr/t2/known/boxes_" + str(classname) + ".pickle", 'wb') as handle:
             pickle.dump(image_ids_nms_boxes, handle)
-        with open("pseudolabels/t3/known/scores_" + str(classname) + ".pickle", 'wb') as handle:
+        with open("pseudolabels/owdetr/t2/known/scores_" + str(classname) + ".pickle", 'wb') as handle:
             pickle.dump(image_ids_nms_scores, handle)
         print(classname, npos, len(image_ids_nms_boxes))
         print("saved pseudo knowns")

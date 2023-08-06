@@ -61,6 +61,34 @@ VOC_COCO_CLASS_NAMES = {}
 # Used for the original dataset benchmark
 VOC_COCO_CLASS_NAMES["TOWOD"] = tuple(itertools.chain(VOC_CLASS_NAMES, T2_CLASS_NAMES, T3_CLASS_NAMES, T4_CLASS_NAMES, UNK_CLASS))
 
+OWDETR_T1_CLASS_NAMES = [
+    "aeroplane","bicycle","bird","boat","bus","car",
+    "cat","cow","dog","horse","motorbike","sheep","train",
+    "elephant","bear","zebra","giraffe","truck","person"
+]
+
+OWDETR_T2_CLASS_NAMES = [
+    "traffic light","fire hydrant","stop sign",
+    "parking meter","bench","chair","diningtable",
+    "pottedplant","backpack","umbrella","handbag",
+    "tie","suitcase","microwave","oven","toaster","sink",
+    "refrigerator","bed","toilet","sofa"
+]
+
+OWDETR_T3_CLASS_NAMES = [
+    "frisbee","skis","snowboard","sports ball",
+    "kite","baseball bat","baseball glove","skateboard",
+    "surfboard","tennis racket","banana","apple","sandwich",
+    "orange","broccoli","carrot","hot dog","pizza","donut","cake"
+]
+
+OWDETR_T4_CLASS_NAMES = [
+    "laptop","mouse","remote","keyboard","cell phone","book",
+    "clock","vase","scissors","teddy bear","hair drier","toothbrush",
+    "wine glass","cup","fork","knife","spoon","bowl","tvmonitor","bottle"
+]
+
+VOC_COCO_CLASS_NAMES["OWDETR"] = tuple(itertools.chain(OWDETR_T1_CLASS_NAMES, OWDETR_T2_CLASS_NAMES, OWDETR_T3_CLASS_NAMES, OWDETR_T4_CLASS_NAMES, UNK_CLASS))
 
 def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], Tuple[str, ...]]):
     """
@@ -103,30 +131,33 @@ def fscore(thresh, df_view, num_positive=10000):
         # Some predictions are not above the threshold
         precision = len(total.loc[total["tp"] == True]) / len(total)
         recall = len(total.loc[total["tp"] == True]) / num_positive
+        if precision == 0 or recall == 0:
+            print("0 precision/recall")
+            return 0, 0, 0
     else:
         return 0, 0, 0
-    #print(precision, recall)
     return precision, recall, (precision * recall) / (precision + recall)
 
 
 def main():
     thresholds = [x / 10 for x in range(10)]
     fn = "t2_known_tpfp_scores.csv"
+    fn = "owdetr_t1_tpfp_scores.csv"
     df = pd.read_csv(fn)
     class_threshold_df = pd.DataFrame()
     class_list = []
     thresh_list = []
-    cc, num_files, class_files = load_voc_instances(dirname="/nfs/hpc/share/omorim/projects/PROB/data/VOC2007", split="owod_t2_train_sample",
-                                                    class_names=VOC_COCO_CLASS_NAMES["TOWOD"])
+    cc, num_files, class_files = load_voc_instances(dirname="/nfs/hpc/share/omorim/projects/PROB/data/VOC2007", split="owdetr_t1_train_sample",
+                                                    class_names=VOC_COCO_CLASS_NAMES["OWDETR"])
     for class_name in set(df.classes.values):
         print(class_name)
-        index = VOC_COCO_CLASS_NAMES["TOWOD"].index(class_name)
+        index = VOC_COCO_CLASS_NAMES["OWDETR"].index(class_name)
         df_view = df.loc[df["classes"] == class_name]
         best_thresh = thresholds[1]
         best_score = 0
         best_prec = 0
         best_rec = 0
-        for thresh in thresholds[1:]:
+        for thresh in thresholds:
             #breakpoint()
             prec, rec, score = fscore(thresh, df_view, cc[str(index)])
             #print(score)
@@ -143,7 +174,9 @@ def main():
     class_threshold_df["class"] = class_list
     class_threshold_df["threshold"] = thresh_list
     print(class_threshold_df)
-    class_threshold_df.to_csv("t2_known50_class_f1_thresholds.csv")
+    fn = "t2_known50_class_f1_thresholds.csv"
+    fn = "owdetr_t1_class_f1_thresholds.csv"
+    class_threshold_df.to_csv(fn)
     return 1
 
 

@@ -78,8 +78,8 @@ def save_pseudo(image_id, pseudo_boxes, out_dr, class_names):
         ET.SubElement(bb_el, 'xmax').text = str(round(box[2]))
         ET.SubElement(bb_el, 'ymax').text = str(round(box[3]))
         ET.SubElement(object_el, 'difficult').text = "0"
-    breakpoint()
-    #tree.write(out_dr + "/" + image_id + ".xml")
+    #breakpoint()
+    tree.write(out_dr + "/" + image_id + ".xml")
 
 
 if __name__ == "__main__":

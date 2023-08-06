@@ -87,29 +87,35 @@ OWDETR_T4_CLASS_NAMES = [
 VOC_COCO_CLASS_NAMES["OWDETR"] = tuple(itertools.chain(OWDETR_T1_CLASS_NAMES, OWDETR_T2_CLASS_NAMES, OWDETR_T3_CLASS_NAMES, OWDETR_T4_CLASS_NAMES, UNK_CLASS))
 
 
-#dir = "../PROB/data/VOC2007"
-dir = "pseudolabels/t3"
+dir = "../PROB/data/VOC2007"
+#dir = "pseudolabels/t3"
 
 # Directories that specify the name of the files that contain which images
 # to use for training and testing
 register_pascal_voc("debug", dir, "debug", 2007, ALL_CLASSES)
 register_pascal_voc("towod_t1", dir, "owod_t1_train", 2007, ALL_CLASSES)
 register_pascal_voc("towod_t2", dir, "owod_t2_train", 2007, ALL_CLASSES)
+register_pascal_voc("towod_t2_exemplars", dir, "owod_t2_train_andexemplars", 2007, ALL_CLASSES)
+
 register_pascal_voc("towod_t2_sample", dir, "owod_t2_train_sample", 2007, ALL_CLASSES)
 register_pascal_voc("towod_t3", dir, "owod_t3_train", 2007, ALL_CLASSES)
 register_pascal_voc("towod_t4", dir, "owod_t4_train", 2007, ALL_CLASSES)
 
-register_pascal_voc("towod_test", dir, "test", 2007, ALL_CLASSES)
+#register_pascal_voc("towod_test", dir, "test", 2007, ALL_CLASSES)
+register_pascal_voc("towod_test", "../PROB/data/VOC2007", "test", 2007, ALL_CLASSES)
 
 register_pascal_voc("owdetr_t1", dir, "owdetr_t1_train", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
+register_pascal_voc("owdetr_t1_sample", dir, "owdetr_t1_train_sample", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
 register_pascal_voc("owdetr_t2", dir, "owdetr_t2_train", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
 register_pascal_voc("owdetr_t3", dir, "owdetr_t3_train", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
 register_pascal_voc("owdetr_t4", dir, "owdetr_t4_train", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
-register_pascal_voc("owdetr_test", dir, "owdetr_test", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
+
+register_pascal_voc("owdetr_test", "../PROB/data/VOC2007", "owdetr_test", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
+#register_pascal_voc("owdetr_test", dir, "owdetr_test", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
 
 # Augmentations to apply to the training data
 dataloader.train = L(build_detection_train_loader)(
-    dataset=L(get_detection_dataset_dicts)(names="towod_t3"),
+    dataset=L(get_detection_dataset_dicts)(names="towod_t2_exemplars"),
     mapper=L(DetrDatasetMapper)(
         augmentation=[
             L(T.RandomFlip)(),
@@ -201,7 +207,7 @@ dataloader.train = L(build_detection_train_loader)(
 
 # Augmentations to apply to the test data
 dataloader.test = L(build_detection_test_loader)(
-    dataset=L(get_detection_dataset_dicts)(names="owdetr_t1", filter_empty=False),
+    dataset=L(get_detection_dataset_dicts)(names="towod_test", filter_empty=False),
     mapper=L(DetrDatasetMapper)(
         augmentation=[
             L(T.ResizeShortestEdge)(
