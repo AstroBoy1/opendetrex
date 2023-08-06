@@ -97,7 +97,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
 
         unknown_class_index = 80
         ONLY_PREDICT = False
-        PREVIOUS_KNOWN = 20
+        PREVIOUS_KNOWN = 40
         NUM_CLASSES = PREVIOUS_KNOWN + 20
         UNKNOWN = True
         SAVE_SCORES = False
@@ -191,8 +191,8 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                 start_index = 0
                 # Use previous class f scores
                 # randomly sample 1000 for tpfp generation
-                if SAVE_ALL_SCORES:
-                    start_index = PREVIOUS_KNOWN
+                #if SAVE_ALL_SCORES:
+                #    start_index = PREVIOUS_KNOWN
                 for cls_id, cls_name in enumerate(self._class_names[start_index:NUM_CLASSES]):
                     #print(cls_id)
                     #breakpoint()
@@ -532,7 +532,7 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
     # number of positive instances for the class
     npos = 0
     for imagename in imagenames:
-        R = [obj for obj in recs[imagename] if obj["name"] in OWDETR_T4_CLASS_NAMES]
+        R = [obj for obj in recs[imagename] if obj["name"] in T4_CLASS_NAMES]
         # Get known rectangles only for t1
         bbox = np.array([x["bbox"] for x in R])
         difficult = np.array([x["difficult"] for x in R]).astype(np.bool)
