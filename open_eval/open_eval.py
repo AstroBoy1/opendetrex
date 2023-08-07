@@ -97,7 +97,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
 
         unknown_class_index = 80
         ONLY_PREDICT = False
-        PREVIOUS_KNOWN = 20
+        PREVIOUS_KNOWN = 0
         NUM_CLASSES = PREVIOUS_KNOWN + 20
         UNKNOWN = False
         SAVE_SCORES = False
@@ -680,7 +680,6 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     # assumes detections are in detpath.format(classname)
     # assumes annotations are in annopath.format(imagename)
     # assumes imagesetfile is a text file with each line an image name
-    UNKNOWN = unknown
     PSEUDO_KNOWNS = pseudo_knowns
 
     T2_CLASS_NAMES = {
