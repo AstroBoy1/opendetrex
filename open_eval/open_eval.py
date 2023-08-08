@@ -97,7 +97,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
 
         unknown_class_index = 80
         ONLY_PREDICT = False
-        PREVIOUS_KNOWN = 40
+        PREVIOUS_KNOWN = 0
         NUM_CLASSES = PREVIOUS_KNOWN + 20
         UNKNOWN = True
         SAVE_SCORES = False
@@ -477,8 +477,8 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
         "wine glass", "cup", "fork", "knife", "spoon", "bowl"
     }
 
-    #T4_CLASS_NAMES.update(T3_CLASS_NAMES)
-    #T4_CLASS_NAMES.update(T2_CLASS_NAMES)
+    T4_CLASS_NAMES.update(T3_CLASS_NAMES)
+    T4_CLASS_NAMES.update(T2_CLASS_NAMES)
 
     OWDETR_T1_CLASS_NAMES = {
         "aeroplane","bicycle","bird","boat","bus","car",
