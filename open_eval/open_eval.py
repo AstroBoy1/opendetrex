@@ -97,9 +97,9 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
 
         unknown_class_index = 80
         ONLY_PREDICT = False
-        PREVIOUS_KNOWN = 0
+        PREVIOUS_KNOWN = 20
         NUM_CLASSES = PREVIOUS_KNOWN + 20
-        UNKNOWN = True
+        UNKNOWN = False
         SAVE_SCORES = False
         # For f1 pseudo calculation
         SAVE_ALL_SCORES = False
@@ -108,7 +108,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         PSEUDO_LABEL_KNOWN = False
         if PSEUDO_LABEL_KNOWN:
             UPPER_THRESH = 55
-        SINGLE_BRANCH = True
+        SINGLE_BRANCH = False
         known_removal = False
         predict_fn = "predictions/t2/known_dual_test.pickle"
         tpfp_fn = "t2_known_tpfp_scores.csv"

@@ -903,7 +903,7 @@ class DINO(nn.Module):
         if vis_period > 0:
             assert input_format is not None, "input_format is required for visualization!"
 
-        EDGES = True
+        EDGES = False
         if EDGES:
             self.weights_x = nn.Parameter(torch.tensor([[1.0], [2.0], [1.0]], requires_grad=True, device=self.device))
             self.zero_vector = torch.zeros((3, 1), device=self.device)
@@ -943,7 +943,7 @@ class DINO(nn.Module):
         #print("processed images")
 
         it = images.tensor
-        EDGES = True
+        EDGES = False
         if EDGES:
             #breakpoint()
             #print("edge network")
@@ -1315,12 +1315,24 @@ class DINO(nn.Module):
         # # [Batch size, num_channels, height, width]
         #print("process function")
         #breakpoint()
-        adaptive_edges = True
-        rgb_only = False
-        bilateral = True
+        adaptive_edges = False
+        rgb_only = True
+        bilateral = False
+        bilateral_only = False
         
         images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
-
+        if bilateral_only:
+            for index, im in enumerate(images):
+                if im.device.type != "cpu":
+                    im = im.cpu()
+                cpu_im = np.array(im)
+                cpu_im = cpu_im.reshape(cpu_im.shape[1], cpu_im.shape[2], cpu_im.shape[0])
+                filtered = cv.bilateralFilter(cpu_im, 9, 75, 75)
+                filtered = filtered.reshape(filtered.shape[2], filtered.shape[0], filtered.shape[1])
+                images[index] = self.normalizer(torch.from_numpy(filtered).to(self.device))
+            images = ImageList.from_tensors(images)
+            return images
+        
         if adaptive_edges:
             gaussian_kernel = [[1, 4, 7, 4, 1],
                            [4, 16, 26, 16, 4],
@@ -1480,29 +1492,33 @@ class DINO(nn.Module):
         boxes = box_pred[0]
         # if len(picked_boxes > self.select_box_nums_for_evaluation):
             # break
-        picked_boxes, picked_scores = None, None
-        for thresh in range(1, 10):
-            #print(1 - thresh / 20)
-            picked_boxes, picked_scores = self.nms(boxes, prob_scores, 1 - thresh / 10)
-            #print(len(picked_boxes))
-            if len(picked_boxes) <= self.select_box_nums_for_evaluation:
-                break
+
+        # picked_boxes, picked_scores = None, None
+        # for thresh in range(1, 10):
+        #     #print(1 - thresh / 20)
+        #     picked_boxes, picked_scores = self.nms(boxes, prob_scores, 1 - thresh / 10)
+        #     #print(len(picked_boxes))
+        #     if len(picked_boxes) <= self.select_box_nums_for_evaluation:
+        #         break
+
         #breakpoint()
-        # topk_values, topk_indexes = torch.topk(
-        #     prob.view(box_cls.shape[0], -1), self.select_box_nums_for_evaluation, dim=1
-        # )
-        # # highest probability score for each query detection, 300
-        # scores = topk_values
-        # topk_boxes = torch.div(topk_indexes, box_cls.shape[2], rounding_mode="floor")
-        # labels = topk_indexes % box_cls.shape[2]
-        #
-        # boxes = torch.gather(box_pred, 1, topk_boxes.unsqueeze(-1).repeat(1, 1, 4))
+        topk_values, topk_indexes = torch.topk(
+            prob.view(box_cls.shape[0], -1), self.select_box_nums_for_evaluation, dim=1
+        )
+        # highest probability score for each query detection, 300
+        scores = topk_values
+        topk_boxes = torch.div(topk_indexes, box_cls.shape[2], rounding_mode="floor")
+        labels = topk_indexes % box_cls.shape[2]
+        
+        boxes = torch.gather(box_pred, 1, topk_boxes.unsqueeze(-1).repeat(1, 1, 4))
         #breakpoint()
-        scores = torch.tensor(picked_scores, device=self.device).clone().detach()
-        scores = scores.reshape((1, len(picked_boxes)))
-        labels = torch.zeros((1, len(picked_scores)), device=self.device)
-        boxes = torch.stack(picked_boxes).reshape((1, len(picked_boxes), 4))
-        boxes = boxes.clone().detach()
+
+        # scores = torch.tensor(picked_scores, device=self.device).clone().detach()
+        # scores = scores.reshape((1, len(picked_boxes)))
+        # labels = torch.zeros((1, len(picked_scores)), device=self.device)
+        # boxes = torch.stack(picked_boxes).reshape((1, len(picked_boxes), 4))
+        # boxes = boxes.clone().detach()
+
         # For each box we assign the best class or the second best if the best on is `no_object`.
         # scores, labels = F.softmax(box_cls, dim=-1)[:, :, :-1].max(-1)
 

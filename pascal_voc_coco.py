@@ -110,9 +110,9 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
         class_names: list or tuple of class names
     """
     
-    UNKNOWN = True
-    PREV_KNOWN = 0
-    EXEMPLAR = False
+    UNKNOWN = False
+    PREV_KNOWN = 20
+    EXEMPLAR = True
     PSEUDO = False
     NUM_CLASSES = PREV_KNOWN + 20
 
@@ -124,7 +124,8 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     dicts = []
     exemplar_set = set()
     if EXEMPLAR:
-        with open("../PROB/data/VOC2007/ImageSets/Main/owod_t2_ft.txt") as fp:
+        with open("../PROB/data/VOC2007/ImageSets/Main/owdetr_t2_ft.txt") as fp:
+        #with open("../PROB/data/VOC2007/ImageSets/Main/owod_t2_ft.txt") as fp:
             exemplar_files = fp.readlines()
         for ef in exemplar_files:
             exemplar_set.add(ef.rstrip())
@@ -188,17 +189,18 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
                     if EXEMPLAR:
                     #if cid >= PREV_KNOWN or (cid < PREV_KNOWN and fileid in exemplar_set):
                         if cid < PREV_KNOWN and fileid in exemplar_set:
-                            exemplar_class_counts[cid] += 1
-                            if exemplar_class_counts[cid] <= 50:
-                                #print("hit max for class", cid)
-                                instances.append(
-                                    {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
-                                )
-                            else:
-                                continue
-                        instances.append(
-                            {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
-                        )
+                            #print("fileid")
+                            # exemplar_class_counts[cid] += 1
+                            # if exemplar_class_counts[cid] <= 50:
+                            #     #print("hit max for class", cid)
+                            #     instances.append(
+                            #         {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
+                            #     )
+                            # else:
+                            #     continue
+                            instances.append(
+                                {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
+                            )
         r["annotations"] = instances
         dicts.append(r)
         # returns filename which is the full filepath, image_id which is just a string,
