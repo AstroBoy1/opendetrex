@@ -98,7 +98,6 @@ class Trainer(SimpleTrainer):
             try:
                 self.before_train()
                 for self.iter in range(start_iter, max_iter):
-                    #print("self.iter", self.iter)
                     self.before_step()
                     self.run_step()
                     self.after_step()
@@ -134,7 +133,7 @@ class Trainer(SimpleTrainer):
         with autocast(enabled=self.amp):
             loss_dict = self.model(data)
             # regression only
-            loss_dict.pop("loss_class")
+            #loss_dict.pop("loss_class")
             if isinstance(loss_dict, torch.Tensor):
                 losses = loss_dict
                 loss_dict = {"total_loss": loss_dict}

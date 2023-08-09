@@ -738,50 +738,6 @@ def step_image_BW(n=100):
     ref_img = (np.clip(ref_img, a_min=0, a_max=1) * 255)[:, :, None].astype(int)
     return ref_img
 
-class EdgeNet(nn.Module):
-
-    # Adaptive Edge Filters
-    def __init__(self):
-        super().__init__()
-        # We keep the middle 0s constant
-        # Init to original Sobel: 1, 2, 1
-        self.device = "cuda"
-        self.weights_x = nn.Parameter(torch.tensor([[0], [1], [0]], requires_grad=True, dtype=torch.half))
-        self.zero_vector = torch.zeros((3, 1), dtype=torch.half)
-        self.weights_y = nn.Parameter(torch.tensor([[0, 1, 0]], requires_grad=True, dtype=torch.half))
-        self.zero_y_vector = torch.zeros((1, 3), dtype=torch.half)
-        #self.initial_weights_x = self.weights_x.detach().clone()
-        self.conv1 = nn.Conv2d(3, 3, 3, dtype=torch.half, device=self.device, padding='same')
-
-    def forward(self, x):
-        # Edge Filter in X direction
-        #breakpoint()
-        # ensure the weights are positive, to get an edge gradient
-        #kernel_x = torch.cat((self.weights_x, self.zero_vector, -self.weights_x), 1)
-        #kernel_x = kernel_x.view(1, 1, 3, 3).repeat(1, 3, 1, 1).to(self.device)
-        #x1 = F.conv2d(x, kernel_x, padding='same')
-        #breakpoint()
-        x1 = self.conv1(x)
-        # Edge Filter in Y direction
-        #kernel_y = torch.cat((self.weights_y, self.zero_y_vector, -self.weights_y), 0)
-        #kernel_y = kernel_y.view(1, 1, 3, 3).repeat(1, 3, 1, 1).to(self.device)
-        #x2 = F.conv2d(x, kernel_y, padding='same')
-
-        # Combine the above 2 channels for more efficient training
-        #edge_mag = torch.sqrt(torch.pow(x1, 2) + torch.pow(x2, 2) + 1e-6)
-        #print("kernel_x", kernel_x)
-        #print("kernel_y", kernel_y)
-        #if not torch.equal(self.weights_x, self.initial_weights_x):
-            #print("initial weights x:", self.initial_weights_x)
-        #breakpoint()
-        #print("current weights x:", self.weights_x)
-            #self.initial_weights_x = self.weights_x.detach().clone()
-        return x1
-        #return edge_mag
-
-
-#edge_net = EdgeNet()
-
 
 class DINO(nn.Module):
     """Implement DAB-Deformable-DETR in `DAB-DETR: Dynamic Anchor Boxes are Better Queries for DETR
@@ -937,16 +893,10 @@ class DINO(nn.Module):
                 - dict["aux_outputs"]: Optional, only returned when auxilary losses are activated. It is a list of
                             dictionnaries containing the two above keys for each decoder layer.
         """
-        #breakpoint()
-        #print("processing images")
         images = self.preprocess_image(batched_inputs)
-        #print("processed images")
-
         it = images.tensor
         EDGES = True
         if EDGES:
-            #breakpoint()
-            #print("edge network")
             kernel_x = torch.cat((self.weights_x, self.zero_vector, -self.weights_x), 1)
             kernel_x = kernel_x.view(1, 1, 3, 3).to(self.device)
             # Apply edges on grayscale channel only for efficiency
@@ -961,29 +911,7 @@ class DINO(nn.Module):
             # for name, param in self.named_parameters():
             #     if param.requires_grad and name == "weights_y":
             #         print(name, param.data, param.grad)
-            # breakpoint()
             it = torch.concat((it[:, [0, 1, 2]], edge_mag), 1)
-            #breakpoint()
-        # Adaptive Edge Net
-        # Currently edge params are shared across channels and summed
-        # Edges X Direction
-        # if EDGES:
-        #     kernel_x = torch.cat((self.weights_x, self.zero_vector, -self.weights_x), 1)
-        #     kernel_x = kernel_x.view(1, 1, 3, 3).repeat(1, 3, 1, 1).to(self.device)
-        #     x1 = F.conv2d(it, kernel_x, padding='same')
-
-        #     # Edges Y Direction
-        #     kernel_y = torch.cat((self.weights_y, self.zero_y_vector, -self.weights_y), 0)
-        #     kernel_y = kernel_y.view(1, 1, 3, 3).repeat(1, 3, 1, 1).to(self.device)
-        #     x2 = F.conv2d(it, kernel_y, padding='same')
-
-        #     edge_mag = torch.sqrt(torch.pow(x1, 2) + torch.pow(x2, 2) + 1e-6)
-
-        #     # for name, param in self.named_parameters():
-        #     #     if param.requires_grad and name == "weights_y":
-        #     #         print(name, param.data, param.grad)
-        #     # breakpoint()
-        #     it = torch.concat((it, edge_mag), 1)
 
         # DINO DETR
         if self.training:
@@ -1441,31 +1369,31 @@ class DINO(nn.Module):
         # if len(picked_boxes > self.select_box_nums_for_evaluation):
             # break
 
-        # picked_boxes, picked_scores = None, None
-        # for thresh in range(1, 10):
-        #     #print(1 - thresh / 20)
-        #     picked_boxes, picked_scores = self.nms(boxes, prob_scores, 1 - thresh / 10)
-        #     #print(len(picked_boxes))
-        #     if len(picked_boxes) <= self.select_box_nums_for_evaluation:
-        #         break
+        picked_boxes, picked_scores = None, None
+        for thresh in range(1, 10):
+            #print(1 - thresh / 20)
+            picked_boxes, picked_scores = self.nms(boxes, prob_scores, 1 - thresh / 10)
+            #print(len(picked_boxes))
+            if len(picked_boxes) <= self.select_box_nums_for_evaluation:
+                break
 
         #breakpoint()
-        topk_values, topk_indexes = torch.topk(
-            prob.view(box_cls.shape[0], -1), self.select_box_nums_for_evaluation, dim=1
-        )
-        # highest probability score for each query detection, 300
-        scores = topk_values
-        topk_boxes = torch.div(topk_indexes, box_cls.shape[2], rounding_mode="floor")
-        labels = topk_indexes % box_cls.shape[2]
+        # topk_values, topk_indexes = torch.topk(
+        #     prob.view(box_cls.shape[0], -1), self.select_box_nums_for_evaluation, dim=1
+        # )
+        # # highest probability score for each query detection, 300
+        # scores = topk_values
+        # topk_boxes = torch.div(topk_indexes, box_cls.shape[2], rounding_mode="floor")
+        # labels = topk_indexes % box_cls.shape[2]
         
-        boxes = torch.gather(box_pred, 1, topk_boxes.unsqueeze(-1).repeat(1, 1, 4))
+        # boxes = torch.gather(box_pred, 1, topk_boxes.unsqueeze(-1).repeat(1, 1, 4))
         #breakpoint()
 
-        # scores = torch.tensor(picked_scores, device=self.device).clone().detach()
-        # scores = scores.reshape((1, len(picked_boxes)))
-        # labels = torch.zeros((1, len(picked_scores)), device=self.device)
-        # boxes = torch.stack(picked_boxes).reshape((1, len(picked_boxes), 4))
-        # boxes = boxes.clone().detach()
+        scores = torch.tensor(picked_scores, device=self.device).clone().detach()
+        scores = scores.reshape((1, len(picked_boxes)))
+        labels = torch.zeros((1, len(picked_scores)), device=self.device)
+        boxes = torch.stack(picked_boxes).reshape((1, len(picked_boxes), 4))
+        boxes = boxes.clone().detach()
 
         # For each box we assign the best class or the second best if the best on is `no_object`.
         # scores, labels = F.softmax(box_cls, dim=-1)[:, :, :-1].max(-1)
