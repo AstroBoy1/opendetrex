@@ -162,55 +162,6 @@ class Trainer(SimpleTrainer):
 
         self._write_metrics(loss_dict, data_time)
 
-    def run_step2(self):
-        """
-        Implement the standard training logic described above.
-        """
-        assert self.model.training, "[Trainer] model was changed to eval mode!"
-        assert torch.cuda.is_available(), "[Trainer] CUDA is required for AMP training!"
-        from torch.cuda.amp import autocast
-
-        start = time.perf_counter()
-        """
-        If you want to do something with the data, you can wrap the dataloader.
-        """
-        data = next(self._data_loader2_iter)
-        data_time = time.perf_counter() - start
-
-        """
-        If you want to do something with the losses, you can wrap the model.
-        """
-        with autocast(enabled=self.amp):
-            loss_dict = self.model(data)
-            loss_dict.pop("loss_class")
-            #breakpoint()
-            if isinstance(loss_dict, torch.Tensor):
-                losses = loss_dict
-                loss_dict = {"total_loss": loss_dict}
-            else:
-                losses = sum(loss_dict.values())
-
-        """
-        If you need to accumulate gradients or do something similar, you can
-        wrap the optimizer with your custom `zero_grad()` method.
-        """
-        self.optimizer.zero_grad()
-
-        if self.amp:
-            self.grad_scaler.scale(losses).backward()
-            if self.clip_grad_params is not None:
-                self.grad_scaler.unscale_(self.optimizer)
-                self.clip_grads(self.model.parameters())
-            self.grad_scaler.step(self.optimizer)
-            self.grad_scaler.update()
-        else:
-            losses.backward()
-            if self.clip_grad_params is not None:
-                self.clip_grads(self.model.parameters())
-            self.optimizer.step()
-
-        self._write_metrics(loss_dict, data_time)
-
     def clip_grads(self, params):
         params = list(filter(lambda p: p.requires_grad and p.grad is not None, params))
         if len(params) > 0:
@@ -297,7 +248,6 @@ def do_train(args, cfg):
 
     # build training loader
     train_loader = instantiate(cfg.dataloader.train)
-    #train_loader2 = instantiate(cfg.dataloader.train2)
     
     # create ddp model
     model = create_ddp_model(model, **cfg.train.ddp)
