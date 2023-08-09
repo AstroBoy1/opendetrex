@@ -903,7 +903,7 @@ class DINO(nn.Module):
         if vis_period > 0:
             assert input_format is not None, "input_format is required for visualization!"
 
-        EDGES = False
+        EDGES = True
         if EDGES:
             self.weights_x = nn.Parameter(torch.tensor([[1.0], [2.0], [1.0]], requires_grad=True, device=self.device))
             self.zero_vector = torch.zeros((3, 1), device=self.device)
@@ -943,7 +943,7 @@ class DINO(nn.Module):
         #print("processed images")
 
         it = images.tensor
-        EDGES = False
+        EDGES = True
         if EDGES:
             #breakpoint()
             #print("edge network")
@@ -1315,11 +1315,14 @@ class DINO(nn.Module):
         # # [Batch size, num_channels, height, width]
         #print("process function")
         #breakpoint()
-        adaptive_edges = False
+        adaptive_edges = True
         rgb_only = True
         bilateral = False
         bilateral_only = False
-        
+
+        if rgb_only:
+            images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
+            return ImageList.from_tensors(images)
         images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
         if bilateral_only:
             for index, im in enumerate(images):

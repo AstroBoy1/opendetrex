@@ -97,9 +97,9 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
 
         unknown_class_index = 80
         ONLY_PREDICT = False
-        PREVIOUS_KNOWN = 20
+        PREVIOUS_KNOWN = 40
         NUM_CLASSES = PREVIOUS_KNOWN + 20
-        UNKNOWN = False
+        UNKNOWN = True
         SAVE_SCORES = False
         # For f1 pseudo calculation
         SAVE_ALL_SCORES = False
@@ -194,11 +194,6 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                 #if SAVE_ALL_SCORES:
                 #    start_index = PREVIOUS_KNOWN
                 for cls_id, cls_name in enumerate(self._class_names[start_index:NUM_CLASSES]):
-                    #print(cls_id)
-                    #breakpoint()
-                    if cls_id == NUM_CLASSES:
-                        cls_id = unknown_class_index
-                        cls_name = self._class_names[cls_id]
                     lines = predictions.get(cls_id, [""])
                     with open(res_file_template.format(cls_name), "w") as f:
                         f.write("\n".join(lines))
