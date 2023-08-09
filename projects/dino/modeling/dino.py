@@ -1313,10 +1313,8 @@ class DINO(nn.Module):
     def preprocess_image(self, batched_inputs, edges_only=False, gray_only=False):
         """GPU Gaussian followed by Sobel"""
         # # [Batch size, num_channels, height, width]
-        #print("process function")
-        #breakpoint()
         adaptive_edges = True
-        rgb_only = True
+        rgb_only = False
         bilateral = False
         bilateral_only = False
 
@@ -1335,8 +1333,7 @@ class DINO(nn.Module):
                 images[index] = self.normalizer(torch.from_numpy(filtered).to(self.device))
             images = ImageList.from_tensors(images)
             return images
-        
-        if adaptive_edges:
+        elif adaptive_edges:
             gaussian_kernel = [[1, 4, 7, 4, 1],
                            [4, 16, 26, 16, 4],
                            [7, 26, 41, 26, 7],
@@ -1346,12 +1343,9 @@ class DINO(nn.Module):
             for index, im in enumerate(images):
                 gray_im = transforms.Grayscale()(im)
                 if bilateral:
-                    #breakpoint()
                     gray_cpu = np.array(gray_im.cpu())
                     gray_cpu = gray_cpu.reshape(gray_cpu.shape[1], gray_cpu.shape[2], gray_cpu.shape[0])
-                    #breakpoint()
                     gray_im = smoothing(ref_img=gray_cpu, lambd=10, sigma_xy=50, sigma_l=50, sigma_s=None, sigma_r=None, show=False)
-                    #breakpoint()
                 smooth_img = None
                 if bilateral:
                     gray_im = gray_im.reshape(gray_im.shape[2], gray_im.shape[0], gray_im.shape[1])
@@ -1361,55 +1355,6 @@ class DINO(nn.Module):
                 images[index] = torch.cat([images[index], smooth_img], dim=0)
             images = ImageList.from_tensors(images)
             return images
-        
-        if rgb_only:
-            images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
-            return ImageList.from_tensors(images)
-        elif bilateral:
-            images = [x["image"] for x in batched_inputs]
-        kernel_v = [[1, 0, -1],
-                    [2, 0, -2],
-                    [1, 0, -1]]
-        kernel_h = [[1, 2, 1],
-                    [0, 0, 0],
-                    [-1, -2, -1]]
-        kernel_h = torch.FloatTensor(kernel_h).unsqueeze(0).unsqueeze(0).to(self.device)
-        kernel_v = torch.FloatTensor(kernel_v).unsqueeze(0).unsqueeze(0).to(self.device)
-        #https://homepages.inf.ed.ac.uk/rbf/HIPR2/gsmooth.htm
-        gaussian_kernel = [[1, 4, 7, 4, 1],
-                           [4, 16, 26, 16, 4],
-                           [7, 26, 41, 26, 7],
-                           [4, 16, 26, 16, 4],
-                           [1, 4, 7, 4, 1]]
-        gaussian_kernel = torch.FloatTensor([[x / 273 for x in y] for y in gaussian_kernel]).unsqueeze(0).unsqueeze(0).to(self.device)
-        for index, im in enumerate(images):
-            # https://docs.opencv.org/4.x/d4/d86/group__imgproc__filter.html#ga9d7064d478c95d60003cf839430737ed
-            if bilateral:
-                #breakpoint()
-                #im_tensor = im["image"]
-                if im.device.type != "cpu":
-                    im = im.cpu()
-                cpu_im = np.array(im)
-                cpu_im = cpu_im.reshape(cpu_im.shape[1], cpu_im.shape[2], cpu_im.shape[0])
-                filtered = cv.bilateralFilter(cpu_im, 9, 75, 75)
-                filtered = filtered.reshape(filtered.shape[2], filtered.shape[0], filtered.shape[1])
-                images[index] = self.normalizer(torch.from_numpy(filtered).to(self.device))
-                continue
-            gray_im = transforms.Grayscale()(im)
-            if gray_only:
-                images[index] = gray_im
-                continue
-            #img = GaussianBlur(kernel_size=3, sigma=(0.1, 2.0))(gray_im)
-            smooth_img = F.conv2d(gray_im, gaussian_kernel, padding='same')
-            x_v = F.conv2d(smooth_img, kernel_v, padding='same')
-            x_h = F.conv2d(smooth_img, kernel_h, padding='same')
-            edge_im = torch.sqrt(torch.pow(x_v, 2) + torch.pow(x_h, 2) + 1e-6)
-            if edges_only:
-                images[index] = edge_im
-            else:
-                images[index] = torch.cat([images[index], edge_im], dim=0)
-            #breakpoint()
-        images = ImageList.from_tensors(images)
         return images
 
 
