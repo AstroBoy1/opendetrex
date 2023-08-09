@@ -57,12 +57,14 @@ VOC_COCO_CLASS_NAMES = {}
 ALL_CLASSES = tuple(itertools.chain(VOC_CLASS_NAMES, T2_CLASS_NAMES, T3_CLASS_NAMES, T4_CLASS_NAMES, UNK_CLASS))
 VOC_COCO_CLASS_NAMES["TOWOD"] = VOC_CLASS_NAMES
 
+# 19 classes
 OWDETR_T1_CLASS_NAMES = [
     "aeroplane","bicycle","bird","boat","bus","car",
     "cat","cow","dog","horse","motorbike","sheep","train",
     "elephant","bear","zebra","giraffe","truck","person"
 ]
 
+# 21 classes
 OWDETR_T2_CLASS_NAMES = [
     "traffic light","fire hydrant","stop sign",
     "parking meter","bench","chair","diningtable",
@@ -71,6 +73,7 @@ OWDETR_T2_CLASS_NAMES = [
     "refrigerator","bed","toilet","sofa"
 ]
 
+# 20 classes
 OWDETR_T3_CLASS_NAMES = [
     "frisbee","skis","snowboard","sports ball",
     "kite","baseball bat","baseball glove","skateboard",
@@ -78,6 +81,7 @@ OWDETR_T3_CLASS_NAMES = [
     "orange","broccoli","carrot","hot dog","pizza","donut","cake"
 ]
 
+# 20 classes
 OWDETR_T4_CLASS_NAMES = [
     "laptop","mouse","remote","keyboard","cell phone","book",
     "clock","vase","scissors","teddy bear","hair drier","toothbrush",
@@ -99,6 +103,8 @@ register_pascal_voc("towod_t2_exemplars", dir, "owod_t2_train_andexemplars", 200
 
 register_pascal_voc("towod_t2_sample", dir, "owod_t2_train_sample", 2007, ALL_CLASSES)
 register_pascal_voc("towod_t3", dir, "owod_t3_train", 2007, ALL_CLASSES)
+register_pascal_voc("towod_t3_exemplars", dir, "owod_t3_train_andexemplars", 2007, ALL_CLASSES)
+
 register_pascal_voc("towod_t4", dir, "owod_t4_train", 2007, ALL_CLASSES)
 
 #register_pascal_voc("towod_test", dir, "test", 2007, ALL_CLASSES)
@@ -117,7 +123,7 @@ register_pascal_voc("owdetr_test", "../PROB/data/VOC2007", "owdetr_test", 2007, 
 
 # Augmentations to apply to the training data
 dataloader.train = L(build_detection_train_loader)(
-    dataset=L(get_detection_dataset_dicts)(names="towod_t1"),
+    dataset=L(get_detection_dataset_dicts)(names="owdetr_t1"),
     mapper=L(DetrDatasetMapper)(
         augmentation=[
             L(T.RandomFlip)(),
@@ -149,67 +155,10 @@ dataloader.train = L(build_detection_train_loader)(
     total_batch_size=16,
     num_workers=4,
 )
-# dataloader.train = L(build_detection_train_loader)(
-#     dataset=L(get_detection_dataset_dicts)(names="towod_t3"),
-#     mapper=L(DetrDatasetMapper)(
-#         augmentation=[
-#             L(T.RandomFlip)(),
-#             L(T.ResizeShortestEdge)(
-#                 short_edge_length=(480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800),
-#                 max_size=1333,
-#                 sample_style="choice"),
-#             L(T.RandomContrast)(
-#                 intensity_min=0,
-#                 intensity_max=2),
-#             L(T.RandomBrightness)(
-#                 intensity_min=0,
-#                 intensity_max=2),
-#             L(T.RandomSaturation)(
-#                 intensity_min=0,
-#                 intensity_max=2),
-#             L(T.RandomLighting)(
-#                 scale=0.1
-#             ),
-#         ],
-#         augmentation_with_crop=[
-#             L(T.RandomFlip)(),
-#             L(T.ResizeShortestEdge)(
-#                 short_edge_length=(400, 500, 600),
-#                 sample_style="choice",
-#             ),
-#             L(T.RandomCrop)(
-#                 crop_type="absolute_range",
-#                 crop_size=(384, 600),
-#             ),
-#             L(T.ResizeShortestEdge)(
-#                 short_edge_length=(480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800),
-#                 max_size=1333,
-#                 sample_style="choice"),
-#             L(T.RandomContrast)(
-#                 intensity_min=0, 
-#                 intensity_max=2), 
-#             L(T.RandomBrightness)(
-#                 intensity_min=0, 
-#                 intensity_max=2), 
-#             L(T.RandomSaturation)(
-#                 intensity_min=0, 
-#                 intensity_max=2), 
-#             L(T.RandomLighting)(
-#                 scale=0.1
-#             ),
-#         ],
-        
-#         is_train=True,
-#         mask_on=False,
-#         img_format="RGB",
-#     ),
-#     total_batch_size=16,
-#     num_workers=4,
-# )
 
 # Augmentations to apply to the test data
 dataloader.test = L(build_detection_test_loader)(
-    dataset=L(get_detection_dataset_dicts)(names="towod_test", filter_empty=False),
+    dataset=L(get_detection_dataset_dicts)(names="owdetr_test", filter_empty=False),
     mapper=L(DetrDatasetMapper)(
         augmentation=[
             L(T.ResizeShortestEdge)(

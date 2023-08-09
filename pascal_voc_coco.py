@@ -82,7 +82,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     PREV_KNOWN = 0
     EXEMPLAR = False
     PSEUDO = False
-    NUM_CLASSES = PREV_KNOWN + 20
+    NUM_CLASSES = PREV_KNOWN + 19
 
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:
         fileids = np.loadtxt(f, dtype=np.str)
@@ -92,7 +92,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     dicts = []
     exemplar_set = set()
     if EXEMPLAR:
-        with open("../PROB/data/VOC2007/ImageSets/Main/owod_t2_ft.txt") as fp:
+        with open("../PROB/data/VOC2007/ImageSets/Main/owod_t3_ft.txt") as fp:
             exemplar_files = fp.readlines()
         for ef in exemplar_files:
             exemplar_set.add(ef.rstrip())

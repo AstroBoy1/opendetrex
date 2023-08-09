@@ -31,55 +31,6 @@ from detectron2.data.detection_utils import convert_image_to_rgb
 
 import cv2 as cv
 from torchvision import transforms
-from torchvision.transforms import GaussianBlur
-
-from torch.autograd import Variable
-
-
-class EdgeNet(nn.Module):
-
-    # Adaptive Edge Filters
-    def __init__(self):
-        super().__init__()
-        # We keep the middle 0s constant
-        # Init to original Sobel: 1, 2, 1
-        self.device = "cuda"
-        self.weights_x = nn.Parameter(torch.tensor([[0], [1], [0]], requires_grad=True, dtype=torch.half))
-        self.zero_vector = torch.zeros((3, 1), dtype=torch.half)
-        self.weights_y = nn.Parameter(torch.tensor([[0, 1, 0]], requires_grad=True, dtype=torch.half))
-        self.zero_y_vector = torch.zeros((1, 3), dtype=torch.half)
-        #self.initial_weights_x = self.weights_x.detach().clone()
-        self.conv1 = nn.Conv2d(3, 3, 3, dtype=torch.half, device=self.device, padding='same')
-
-    def forward(self, x):
-        # Edge Filter in X direction
-        #breakpoint()
-        # ensure the weights are positive, to get an edge gradient
-        #kernel_x = torch.cat((self.weights_x, self.zero_vector, -self.weights_x), 1)
-        #kernel_x = kernel_x.view(1, 1, 3, 3).repeat(1, 3, 1, 1).to(self.device)
-        #x1 = F.conv2d(x, kernel_x, padding='same')
-        #breakpoint()
-        x1 = self.conv1(x)
-        # Edge Filter in Y direction
-        #kernel_y = torch.cat((self.weights_y, self.zero_y_vector, -self.weights_y), 0)
-        #kernel_y = kernel_y.view(1, 1, 3, 3).repeat(1, 3, 1, 1).to(self.device)
-        #x2 = F.conv2d(x, kernel_y, padding='same')
-
-        # Combine the above 2 channels for more efficient training
-        #edge_mag = torch.sqrt(torch.pow(x1, 2) + torch.pow(x2, 2) + 1e-6)
-        #print("kernel_x", kernel_x)
-        #print("kernel_y", kernel_y)
-        #if not torch.equal(self.weights_x, self.initial_weights_x):
-            #print("initial weights x:", self.initial_weights_x)
-        #breakpoint()
-        #print("current weights x:", self.weights_x)
-            #self.initial_weights_x = self.weights_x.detach().clone()
-        return x1
-        #return edge_mag
-
-
-#edge_net = EdgeNet()
-
 
 class DINO(nn.Module):
     """Implement DAB-Deformable-DETR in `DAB-DETR: Dynamic Anchor Boxes are Better Queries for DETR
@@ -129,8 +80,6 @@ class DINO(nn.Module):
         vis_period: int = 0,
     ):
         super().__init__()
-
-        #self.edge_net = EdgesNet()
 
         # define backbone and position embedding module
         self.backbone = backbone
