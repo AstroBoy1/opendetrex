@@ -538,7 +538,6 @@ class DINO(nn.Module):
         # # [Batch size, num_channels, height, width]
         images = [self.normalizer(x["image"].to(self.device)) for x in batched_inputs]
         return ImageList.from_tensors(images)
-        #return images
 
     def nms(self, bounding_boxes, confidence_score, threshold):
         # If no bounding boxes, return empty list

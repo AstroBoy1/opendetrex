@@ -133,8 +133,6 @@ class Trainer(SimpleTrainer):
         """
         with autocast(enabled=self.amp):
             loss_dict = self.model(data)
-            # regression only
-            #loss_dict.pop("loss_class")
             if isinstance(loss_dict, torch.Tensor):
                 losses = loss_dict
                 loss_dict = {"total_loss": loss_dict}
