@@ -59,9 +59,9 @@ VOC_COCO_CLASS_NAMES["TOWOD"] = VOC_CLASS_NAMES
 
 # 19 classes
 OWDETR_T1_CLASS_NAMES = [
-    "aeroplane","bicycle","bird","boat","bus","car",
-    "cat","cow","dog","horse","motorbike","sheep","train",
-    "elephant","bear","zebra","giraffe","truck","person"
+    "aeroplane", "bicycle", "bird", "boat", "bus", "car",
+    "cat", "cow", "dog", "horse", "motorbike", "sheep", "train",
+    "elephant", "bear", "zebra", "giraffe", "truck", "person"
 ]
 
 # 21 classes
@@ -115,7 +115,7 @@ register_pascal_voc("owdetr_test", dir, "owdetr_test", 2007, VOC_COCO_CLASS_NAME
 
 # Augmentations to apply to the training data
 dataloader.train = L(build_detection_train_loader)(
-    dataset=L(get_detection_dataset_dicts)(names="towod_t2"),
+    dataset=L(get_detection_dataset_dicts)(names="towod_t3"),
     mapper=L(DetrDatasetMapper)(
         augmentation=[
             L(T.RandomFlip)(),

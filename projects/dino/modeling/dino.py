@@ -1290,7 +1290,6 @@ class DINO(nn.Module):
         # If no bounding boxes, return empty list
         if len(bounding_boxes) == 0:
             return [], []
-        #breakpoint()
         # Bounding boxes
         #boxes = np.array(bounding_boxes)
         boxes = np.array(torch.clone(bounding_boxes).detach().cpu())

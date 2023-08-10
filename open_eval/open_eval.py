@@ -108,7 +108,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         PSEUDO_LABEL_KNOWN = False
         if PSEUDO_LABEL_KNOWN:
             UPPER_THRESH = 55
-        SINGLE_BRANCH = False
+        SINGLE_BRANCH = True
         known_removal = False
         predict_fn = "predictions/t1/known_dual_test.pickle"
         #predict_fn = "predictions/t2/known_dual_test.pickle"
@@ -146,7 +146,6 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         predictions[clsid].extend(lines)
                     else:
                         predictions[unknown_class_index].extend(lines)
-        #breakpoint()
         del all_predictions
         self._logger.info(
             "Evaluating {} using {} metric. "
@@ -155,7 +154,6 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
             )
         )
 
-        ret = OrderedDict()
         with tempfile.TemporaryDirectory(prefix="pascal_voc_eval_") as dirname:
             res_file_template = os.path.join(dirname, "{}.txt")
             aps = defaultdict(list)  # iou -> ap per class
@@ -276,9 +274,6 @@ def parse_rec(filename):
         obj_struct["name"] = cls_name
         if cls_name in VOC_CLASS_NAMES_COCOFIED:
             obj_struct["name"] = BASE_VOC_CLASS_NAMES[VOC_CLASS_NAMES_COCOFIED.index(cls_name)]
-        # This causes problems, because coco doesn't have pose annotations possibly
-        #obj_struct["pose"] = obj.find("pose").text
-        #obj_struct["truncated"] = int(obj.find("truncated").text)
         obj_struct["difficult"] = int(obj.find("difficult").text)
         bbox = obj.find("bndbox")
         obj_struct["bbox"] = [
