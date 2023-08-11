@@ -97,7 +97,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
 
         unknown_class_index = 80
         ONLY_PREDICT = False
-        PREVIOUS_KNOWN = 40
+        PREVIOUS_KNOWN = 60
         NUM_CLASSES = PREVIOUS_KNOWN + 20
         #NUM_CLASSES = PREVIOUS_KNOWN + 19
         UNKNOWN = False
@@ -549,7 +549,6 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
     image_id_scores = defaultdict(list)
 
     known_hash = defaultdict(list)
-    #breakpoint()
     if known_removal:
         with open(known_pred_fn, 'rb') as handle:
             known_saved_hash = pickle.load(handle)
@@ -557,7 +556,6 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
                 for prediction in value:
                     known_hash[key].append([float(prediction[2]), float(prediction[3]), float(prediction[4]),
                                             float(prediction[5])])
-        #breakpoint()
     unknown_hash = defaultdict(list)
     for key, value in zip(image_ids, BB):
         unknown_hash[key].append(value)
@@ -597,7 +595,6 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
             overlaps = inters / uni
             ovmax = np.max(overlaps)
             jmax = np.argmax(overlaps)
-        #print("ovmax", ovmax)
         if ovmax > ovthresh:
             if not R["difficult"][jmax]:
                 if not R["det"][jmax]:
@@ -605,7 +602,6 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
                     if flag:
                         o, j = iou(known_pred_boxes, bb)
                         if o > 0.9:
-                            #print("known overlap")
                             fp[d] = 1.0
                         else:
                             tp[d] = 1.0

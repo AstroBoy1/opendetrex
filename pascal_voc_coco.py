@@ -79,7 +79,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     """
     
     UNKNOWN = False
-    PREV_KNOWN = 40
+    PREV_KNOWN = 60
     EXEMPLAR = True
     PSEUDO = False
     NUM_CLASSES = PREV_KNOWN + 20
@@ -92,7 +92,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     dicts = []
     exemplar_set = set()
     if EXEMPLAR:
-        with open("../PROB/data/VOC2007/ImageSets/Main/owod_t3_ft.txt") as fp:
+        with open("../PROB/data/VOC2007/ImageSets/Main/owod_t4_ft.txt") as fp:
             exemplar_files = fp.readlines()
         for ef in exemplar_files:
             exemplar_set.add(ef.rstrip())
@@ -138,7 +138,6 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             bbox[0] -= 1.0
             bbox[1] -= 1.0
             cid = class_names.index(cls)
-            # 1 for unknown
             if UNKNOWN:
                 if cid < NUM_CLASSES:
                     cid = 0
@@ -148,11 +147,6 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             else:
                 # Only add a label if it's a known object
                 if cid < NUM_CLASSES:
-                    # if cls_index < PREV_KNOWN and fileid in exemplar_set:
-                    #     print("exemplar file")
-                    # if fileid in pseudo_file_set:
-                    #     count += 1
-                    # Already set the other classes to unknown
                     if PSEUDO:
                         instances.append(
                             {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
@@ -162,7 +156,6 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
                             {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
                         )
                     elif EXEMPLAR:
-                    #if cid >= PREV_KNOWN or (cid < PREV_KNOWN and fileid in exemplar_set):
                         if fileid in exemplar_set:
                             instances.append(
                                 {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}

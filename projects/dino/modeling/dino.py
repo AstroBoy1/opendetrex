@@ -595,7 +595,6 @@ class DINO(nn.Module):
 
             left = np.where(ratio < threshold)
             order = order[left]
-        # breakpoint()
         return picked_boxes, picked_score
 
     def inference(self, box_cls, box_pred, image_sizes):
