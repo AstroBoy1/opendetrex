@@ -498,7 +498,7 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
         "wine glass","cup","fork","knife","spoon","bowl","tvmonitor","bottle"
     }
 
-    OWDETR_T4_CLASS_NAMES.update(OWDETR_T3_CLASS_NAMES)
+    #OWDETR_T4_CLASS_NAMES.update(OWDETR_T3_CLASS_NAMES)
     #OWDETR_T4_CLASS_NAMES.update(OWDETR_T2_CLASS_NAMES)
 
     # first load gt
