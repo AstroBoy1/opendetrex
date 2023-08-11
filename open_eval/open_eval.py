@@ -148,7 +148,6 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         predictions[clsid].extend(lines)
                     else:
                         predictions[unknown_class_index].extend(lines)
-        #breakpoint()
         del all_predictions
         self._logger.info(
             "Evaluating {} using {} metric. "
@@ -458,8 +457,6 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
     # assumes detections are in detpath.format(classname)
     # assumes annotations are in annopath.format(imagename)
     # assumes imagesetfile is a text file with each line an image name
-
-    #KNOWN_REMOVAL = False
 
     T2_CLASS_NAMES = {
         "truck", "traffic light", "fire hydrant", "stop sign", "parking meter",
