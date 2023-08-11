@@ -36,10 +36,10 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     """
     
     UNKNOWN = True
-    PREV_KNOWN = 40
+    PREV_KNOWN = 19
     EXEMPLAR = False
     PSEUDO = False
-    NUM_CLASSES = PREV_KNOWN + 20
+    NUM_CLASSES = PREV_KNOWN + 21
 
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:
         fileids = np.loadtxt(f, dtype=np.str)
@@ -108,7 +108,6 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
                         )
                     elif EXEMPLAR:
                         if cid < PREV_KNOWN and fileid in exemplar_set:
-                            #print("fileid")
                             # exemplar_class_counts[cid] += 1
                             # if exemplar_class_counts[cid] <= 50:
                             #     #print("hit max for class", cid)

@@ -110,7 +110,6 @@ class Trainer(SimpleTrainer):
                 raise
             finally:
                 self.after_train()
-    
 
     def run_step(self):
         """
@@ -247,8 +246,7 @@ def do_train(args, cfg):
 
     # build training loader
     train_loader = instantiate(cfg.dataloader.train)
-    #train_loader2 = instantiate(cfg.dataloader.train2)
-    
+
     # create ddp model
     model = create_ddp_model(model, **cfg.train.ddp)
 

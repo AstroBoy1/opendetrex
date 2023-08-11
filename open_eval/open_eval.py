@@ -468,7 +468,7 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
         "wine glass", "cup", "fork", "knife", "spoon", "bowl"
     }
 
-    T4_CLASS_NAMES.update(T3_CLASS_NAMES)
+    #T4_CLASS_NAMES.update(T3_CLASS_NAMES)
     #T4_CLASS_NAMES.update(T2_CLASS_NAMES)
 
     OWDETR_T1_CLASS_NAMES = {
@@ -498,10 +498,8 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
         "wine glass","cup","fork","knife","spoon","bowl","tvmonitor","bottle"
     }
 
-    #breakpoint()
-    #unknown_classes.update(T4_CLASS_NAMES)
     OWDETR_T4_CLASS_NAMES.update(OWDETR_T3_CLASS_NAMES)
-    OWDETR_T4_CLASS_NAMES.update(OWDETR_T2_CLASS_NAMES)
+    #OWDETR_T4_CLASS_NAMES.update(OWDETR_T2_CLASS_NAMES)
 
     # first load gt
     # read list of images
@@ -518,13 +516,12 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
         except:
             print("error with file", imagename)
             print(annopath.format(imagename))
-            breakpoint()
     # extract gt objects for this class
     class_recs = {}
     # number of positive instances for the class
     npos = 0
     for imagename in imagenames:
-        R = [obj for obj in recs[imagename] if obj["name"] in T4_CLASS_NAMES]
+        R = [obj for obj in recs[imagename] if obj["name"] in OWDETR_T4_CLASS_NAMES]
         # Get known rectangles only for t1
         bbox = np.array([x["bbox"] for x in R])
         difficult = np.array([x["difficult"] for x in R]).astype(np.bool)
@@ -574,10 +571,8 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
         # iou returns the max iou for each pair
         BBGT = R["bbox"].astype(float)
         known_pred_boxes = None
-        flag = False
         if image_ids[d] in known_hash.keys():
             known_pred_boxes = known_hash[image_ids[d]]
-            flag = True
             known_pred_boxes = np.array([elem for elem in known_pred_boxes]).astype(np.float)
         # If there is a groundtruth object for this class
         if BBGT.size > 0:
@@ -661,7 +656,6 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     # assumes detections are in detpath.format(classname)
     # assumes annotations are in annopath.format(imagename)
     # assumes imagesetfile is a text file with each line an image name
-    UNKNOWN = unknown
     PSEUDO_KNOWNS = pseudo_knowns
 
     T2_CLASS_NAMES = {
@@ -751,10 +745,6 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     # For each image id key, value is a list of bounding boxes
     image_id_boxes = defaultdict(list)
     image_id_scores = defaultdict(list)
-    class_scores = []
-    #class_thresholds_df = pd.read_csv("t1_known_class_f1_thresholds.csv")
-    #breakpoint()
-    #class_threshold = class_thresholds_df.loc[class_thresholds_df["class"] == classname]["threshold"].values
 
     for d in range(nd):
         R = class_recs[image_ids[d]]
@@ -787,7 +777,6 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
             overlaps = inters / uni
             ovmax = np.max(overlaps)
             jmax = np.argmax(overlaps)
-        #print("ovmax", ovmax)
         if ovmax > ovthresh:
             if not R["difficult"][jmax]:
                 if not R["det"][jmax]:
@@ -826,7 +815,6 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
                 picked_boxes, picked_score = nms(bounding_boxes, confidence_score, threshold=ovthresh)
                 image_ids_nms_boxes[key] = picked_boxes
                 image_ids_nms_scores[key] = picked_score
-            # breakpoint()
             with open("pseudolabels/t2/known_50_2/boxes_" + str(classname) + ".pickle", 'wb') as handle:
                 pickle.dump(image_ids_nms_boxes, handle)
             with open("pseudolabels/t2/known_50_2/scores_" + str(classname) + ".pickle", 'wb') as handle:

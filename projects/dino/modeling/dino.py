@@ -1341,7 +1341,6 @@ class DINO(nn.Module):
 
             left = np.where(ratio < threshold)
             order = order[left]
-        #breakpoint()
         return picked_boxes, picked_score
 
     def inference(self, box_cls, box_pred, image_sizes):
@@ -1361,7 +1360,6 @@ class DINO(nn.Module):
         results = []
         # box_cls.shape: 1, 300, 80
         # box_pred.shape: 1, 300, 4
-        #breakpoint()
         prob = box_cls.sigmoid()
         prob_scores = [x[0] for x in prob[0]]
         boxes = box_pred[0]
@@ -1370,13 +1368,10 @@ class DINO(nn.Module):
 
         picked_boxes, picked_scores = None, None
         for thresh in range(1, 10):
-            #print(1 - thresh / 20)
             picked_boxes, picked_scores = self.nms(boxes, prob_scores, 1 - thresh / 10)
-            #print(len(picked_boxes))
             if len(picked_boxes) <= self.select_box_nums_for_evaluation:
                 break
 
-        #breakpoint()
         # topk_values, topk_indexes = torch.topk(
         #     prob.view(box_cls.shape[0], -1), self.select_box_nums_for_evaluation, dim=1
         # )
@@ -1386,7 +1381,6 @@ class DINO(nn.Module):
         # labels = topk_indexes % box_cls.shape[2]
         
         # boxes = torch.gather(box_pred, 1, topk_boxes.unsqueeze(-1).repeat(1, 1, 4))
-        #breakpoint()
 
         scores = torch.tensor(picked_scores, device=self.device).clone().detach()
         scores = scores.reshape((1, len(picked_boxes)))
@@ -1407,7 +1401,6 @@ class DINO(nn.Module):
             result.scores = scores_per_image
             result.pred_classes = labels_per_image
             results.append(result)
-        #breakpoint()
         return results
 
     def prepare_targets(self, targets):
