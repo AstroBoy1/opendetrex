@@ -123,9 +123,11 @@ register_pascal_voc("owdetr_t4_exemplars", dir, "owdetr_t4_train_andexemplars", 
 register_pascal_voc("owdetr_test", "../PROB/data/VOC2007", "owdetr_test", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
 #register_pascal_voc("owdetr_test", dir, "owdetr_test", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
 
+register_pascal_voc("d3_test", dir, "d3_test", 2007, ALL_CLASSES)
+
 # Augmentations to apply to the training data
 dataloader.train = L(build_detection_train_loader)(
-    dataset=L(get_detection_dataset_dicts)(names="towod_t4_exemplars"),
+    dataset=L(get_detection_dataset_dicts)(names="towod_t1"),
     mapper=L(DetrDatasetMapper)(
         augmentation=[
             L(T.RandomFlip)(),
@@ -160,7 +162,7 @@ dataloader.train = L(build_detection_train_loader)(
 
 # Augmentations to apply to the test data
 dataloader.test = L(build_detection_test_loader)(
-    dataset=L(get_detection_dataset_dicts)(names="towod_test", filter_empty=False),
+    dataset=L(get_detection_dataset_dicts)(names="d3_test", filter_empty=False),
     mapper=L(DetrDatasetMapper)(
         augmentation=[
             L(T.ResizeShortestEdge)(

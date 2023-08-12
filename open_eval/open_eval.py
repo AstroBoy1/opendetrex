@@ -97,8 +97,8 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
 
         unknown_class_index = 80
         ONLY_PREDICT = False
-        PREVIOUS_KNOWN = 60
-        NUM_CLASSES = PREVIOUS_KNOWN + 20
+        PREVIOUS_KNOWN = 15
+        NUM_CLASSES = PREVIOUS_KNOWN + 5
         #NUM_CLASSES = PREVIOUS_KNOWN + 19
         UNKNOWN = False
         SAVE_SCORES = False
@@ -196,8 +196,6 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                 ret = OrderedDict()
                 unknown_recall_50 = 0
                 for cls_id, cls_name in enumerate(self._class_names[:NUM_CLASSES]):
-                    #print(cls_id)
-                    #breakpoint()
                     if cls_id == NUM_CLASSES:
                         cls_id = unknown_class_index
                         cls_name = self._class_names[cls_id]
@@ -208,8 +206,6 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         save_class_scores(predictions)
                         return 1
                     for thresh in range(50, UPPER_THRESH, 5):
-                        # thresholds 50, 55, ...95
-                        # For debugging purposes
                         if len(lines) == 1:
                             rec, ap = [0], 0
                         else:
