@@ -28,18 +28,22 @@ VOC_CLASS_NAMES_COCOFIED = set([
     "potted plant", "couch", "tv"
 ])
 
+d3_t1_classes = set(["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow"])
+d3_t2_classes = set(["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
+              "diningtable", "dog", "horse", "motorbike", "person"])
+d3_t3_classes = set(["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow"])
+
 
 def main():
-    out_dr = "pseudolabels/t3/Annotations"
+    out_dr = "pseudolabels/d3/t2/Annotations"
     image_box_hash = defaultdict(list)
     image_class_hash = defaultdict(list)
-    for class_name in t1_classes:
-        with open("pseudolabels/t3/known/boxes_{}.pickle".format(class_name), "rb") as fp:
+    for class_name in d3_t1_classes:
+        with open("pseudolabels/d3/t2/known/boxes_{}.pickle".format(class_name), "rb") as fp:
             box_hash = pickle.load(fp)
             for k, v in box_hash.items():
                 image_box_hash[k].append(v[0])
                 image_class_hash[k].append(class_name)
-    #breakpoint()
     #keys = set(image_box_hash.keys())
     # Save the image ids that contain pseudolabels for the loading of labels
     # Some images may not have any predictions so did not have the previous object labels removed
@@ -51,23 +55,23 @@ def main():
             print(count)
         save_pseudo(image_id, image_box_hash[image_id], out_dr, image_class_hash[image_id])
 
+
 def save_pseudo(image_id, pseudo_boxes, out_dr, class_names):
     """save the pseudo data to xml files in an Annotation folder
     takes in the output from class_agnostic pseudo labels"""
     # Add the object predictions to a new version of the xml file in out_dr
     # add pseudo labeled instances, and change t1 instances to unknown
     fn = "../PROB/data/VOC2007/Annotations/" + image_id + ".xml"
-    print(fn)
+    #print(fn)
     tree = ET.parse(fn)
     root = tree.getroot()
-    print(len(pseudo_boxes), class_names)
-    #print(fn, pseudo_boxes, class_names)
-    #breakpoint()
+    #print(len(pseudo_boxes), class_names)
     # Remove the annotations for previous classes by setting it as unknown
     #breakpoint()
     for object in root.iter('name'):
-        print(object.text)
-        if object.text in t1_classes or object.text in VOC_CLASS_NAMES_COCOFIED or object.text in t2_classes:
+        #print(object.text)
+        if object.text in d3_t1_classes or object.text == "airplane":
+        #if object.text in d3_t1_classes or object.text in VOC_CLASS_NAMES_COCOFIED:
             object.text = "unknown"
     for box, class_name in zip(pseudo_boxes, class_names):
         object_el = ET.SubElement(root, 'object')

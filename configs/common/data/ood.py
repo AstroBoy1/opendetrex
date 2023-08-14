@@ -125,9 +125,12 @@ register_pascal_voc("owdetr_test", "../PROB/data/VOC2007", "owdetr_test", 2007, 
 
 register_pascal_voc("d3_test", dir, "d3_test", 2007, ALL_CLASSES)
 
+pseudo_dir = "pseudolabels/d3/t2"
+register_pascal_voc("d3_t2_incremental", pseudo_dir, "owod_t1_train", 2007, ALL_CLASSES)
+
 # Augmentations to apply to the training data
 dataloader.train = L(build_detection_train_loader)(
-    dataset=L(get_detection_dataset_dicts)(names="towod_t1"),
+    dataset=L(get_detection_dataset_dicts)(names="d3_t2_incremental"),
     mapper=L(DetrDatasetMapper)(
         augmentation=[
             L(T.RandomFlip)(),
@@ -162,7 +165,7 @@ dataloader.train = L(build_detection_train_loader)(
 
 # Augmentations to apply to the test data
 dataloader.test = L(build_detection_test_loader)(
-    dataset=L(get_detection_dataset_dicts)(names="d3_test", filter_empty=False),
+    dataset=L(get_detection_dataset_dicts)(names="towod_t1", filter_empty=False),
     mapper=L(DetrDatasetMapper)(
         augmentation=[
             L(T.ResizeShortestEdge)(

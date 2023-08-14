@@ -95,26 +95,34 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
             dict: has a key "segm", whose value is a dict of "AP", "AP50", and "AP75".
         """
 
+        # Generate predictions with model for t1_tpfp_scores
+        # SAVE_ALL_SCORES = True, PSEUDO_LABEL_KNOWN = False, tpfp_fn
+
+        # For generating pseudo labels, PSEUDO_LABEL_KNOWN=True, SAVE_ALL_SCORES=False
+
         unknown_class_index = 80
         ONLY_PREDICT = False
-        PREVIOUS_KNOWN = 15
-        NUM_CLASSES = PREVIOUS_KNOWN + 5
-        #NUM_CLASSES = PREVIOUS_KNOWN + 19
         UNKNOWN = False
         SAVE_SCORES = False
+
         # For f1 pseudo calculation
         SAVE_ALL_SCORES = False
+        tpfp_fn = "d3_t2_tpfp_scores.csv"
+        class_thresholds_fn = "d3_t1_class_f1_thresholds.csv"
+        PSEUDO_LABEL_KNOWN = False
+        pseudo_box_fn = "pseudolabels/d3/t2/known/boxes_"
+        pseudo_score_fn = "pseudolabels/d3/t2/known/scores_"
+        PREVIOUS_KNOWN = 15
+        NUM_CLASSES = PREVIOUS_KNOWN + 5
 
         UPPER_THRESH = 100
         if SAVE_ALL_SCORES:
             UPPER_THRESH = 55
-        PSEUDO_LABEL_KNOWN = False
         if PSEUDO_LABEL_KNOWN:
             UPPER_THRESH = 55
         SINGLE_BRANCH = False
         known_removal = False
         predict_fn = "predictions/t1/known_dual_test.pickle"
-        tpfp_fn = "owdetr_t1_tpfp_scores.csv"
 
         all_predictions = comm.gather(self._predictions, dst=0)
         # list containing dictionary of keys with classes and values predictions
@@ -218,7 +226,9 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                                 use_07_metric=self._is_2007, df_classes=self.df_classes,
                             df_probs=self.df_probs,
                             df_tp=self.df_tp,
-                            df_save=SAVE_ALL_SCORES, unknown=False, pseudo_knowns=PSEUDO_LABEL_KNOWN
+                            df_save=SAVE_ALL_SCORES, unknown=False, pseudo_knowns=PSEUDO_LABEL_KNOWN,
+                                class_thresholds_fn=class_thresholds_fn, pseudo_box_fn=pseudo_box_fn,
+                                pseudo_score_fn=pseudo_score_fn
                             )
                         if cls_id != unknown_class_index:
                             aps[thresh].append(ap * 100)
@@ -647,7 +657,8 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
 
 
 def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_metric=False, df_classes=None,
-             df_probs=None, df_tp=None, df_save=False, unknown=False, pseudo_knowns=False):
+             df_probs=None, df_tp=None, df_save=False, unknown=False, pseudo_knowns=False, class_thresholds_fn=None,
+             pseudo_box_fn=None, pseudo_score_fn=None):
     """rec, prec, ap = voc_eval(detpath,
                                 annopath,
                                 imagesetfile,
@@ -788,9 +799,10 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     image_id_boxes = defaultdict(list)
     image_id_scores = defaultdict(list)
     class_scores = []
-    #class_thresholds_df = pd.read_csv("t1_known_class_f1_thresholds.csv")
-    #breakpoint()
-    #class_threshold = class_thresholds_df.loc[class_thresholds_df["class"] == classname]["threshold"].values
+
+    #class_thresholds_fn = "d3_t1_class_f1_thresholds.csv"
+    class_thresholds_df = pd.read_csv(class_thresholds_fn)
+    class_threshold = class_thresholds_df.loc[class_thresholds_df["class"] == classname]["threshold"].values
 
     for d in range(nd):
         R = class_recs[image_ids[d]]
@@ -823,7 +835,6 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
             overlaps = inters / uni
             ovmax = np.max(overlaps)
             jmax = np.argmax(overlaps)
-        #print("ovmax", ovmax)
         if ovmax > ovthresh:
             if not R["difficult"][jmax]:
                 if not R["det"][jmax]:
@@ -862,9 +873,9 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
             picked_boxes, picked_score = nms(bounding_boxes, confidence_score, threshold=ovthresh)
             image_ids_nms_boxes[key] = picked_boxes
             image_ids_nms_scores[key] = picked_score
-        with open("pseudolabels/owdetr/t2/known/boxes_" + str(classname) + ".pickle", 'wb') as handle:
+        with open(pseudo_box_fn + str(classname) + ".pickle", 'wb') as handle:
             pickle.dump(image_ids_nms_boxes, handle)
-        with open("pseudolabels/owdetr/t2/known/scores_" + str(classname) + ".pickle", 'wb') as handle:
+        with open(pseudo_score_fn + str(classname) + ".pickle", 'wb') as handle:
             pickle.dump(image_ids_nms_scores, handle)
         print(classname, npos, len(image_ids_nms_boxes))
         print("saved pseudo knowns")
