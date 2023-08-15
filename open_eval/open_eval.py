@@ -97,8 +97,8 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
 
         unknown_class_index = 80
         ONLY_PREDICT = False
-        PREVIOUS_KNOWN = 40
-        NUM_CLASSES = PREVIOUS_KNOWN + 20
+        PREVIOUS_KNOWN = 0
+        NUM_CLASSES = PREVIOUS_KNOWN + 80
         UNKNOWN = True
         SAVE_SCORES = False
         # For f1 pseudo calculation
@@ -468,8 +468,8 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
         "wine glass", "cup", "fork", "knife", "spoon", "bowl"
     }
 
-    #T4_CLASS_NAMES.update(T3_CLASS_NAMES)
-    #T4_CLASS_NAMES.update(T2_CLASS_NAMES)
+    T4_CLASS_NAMES.update(T3_CLASS_NAMES)
+    T4_CLASS_NAMES.update(T2_CLASS_NAMES)
 
     OWDETR_T1_CLASS_NAMES = {
         "aeroplane","bicycle","bird","boat","bus","car",
@@ -521,7 +521,7 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
     # number of positive instances for the class
     npos = 0
     for imagename in imagenames:
-        R = [obj for obj in recs[imagename] if obj["name"] in OWDETR_T4_CLASS_NAMES]
+        R = [obj for obj in recs[imagename] if obj["name"] in T4_CLASS_NAMES]
         # Get known rectangles only for t1
         bbox = np.array([x["bbox"] for x in R])
         difficult = np.array([x["difficult"] for x in R]).astype(np.bool)
