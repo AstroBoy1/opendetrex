@@ -67,6 +67,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         self.df_probs = []
         self.df_tp = []
 
+        self.class_aose = defaultdict(int)
 
     def reset(self):
         self._predictions = defaultdict(list)  # class name -> list of prediction strings
@@ -100,9 +101,9 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         # SAVE_ALL_SCORES = True, PSEUDO_LABEL_KNOWN = False, tpfp_fn
 
         # For generating pseudo labels, PSEUDO_LABEL_KNOWN=True, SAVE_ALL_SCORES=False
-
+        return
         unknown_class_index = 80
-        ONLY_PREDICT = True
+        ONLY_PREDICT = False
         predict_fn = "predictions/owdetr_test_sample_known.pickle"
         UNKNOWN = False
         SAVE_SCORES = False
@@ -114,8 +115,8 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         PSEUDO_LABEL_KNOWN = False
         pseudo_box_fn = "pseudolabels/d3/t3/known/boxes_"
         pseudo_score_fn = "pseudolabels/d3/t3/known/scores_"
-        PREVIOUS_KNOWN = 15
-        NUM_CLASSES = PREVIOUS_KNOWN + 5
+        PREVIOUS_KNOWN = 0
+        NUM_CLASSES = PREVIOUS_KNOWN + 20
 
         # For dataset 3
         save_exemplars = False
@@ -123,7 +124,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         exemplar_fn = "exemplars/d3/t2/exemplars.pickle"
         if save_exemplars:
             exemplar_image_ids = set()
-
+        
         UPPER_THRESH = 100
         if SAVE_ALL_SCORES or save_exemplars:
             UPPER_THRESH = 55
@@ -132,6 +133,10 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         SINGLE_BRANCH = False
         known_removal = False
 
+        aose = False
+        if aose:
+            UPPER_THRESH = 55
+        
         all_predictions = comm.gather(self._predictions, dst=0)
         # list containing dictionary of keys with classes and values predictions
         # each prediction contains [image id, score, xmin, ymin, xmax, ymax
@@ -247,7 +252,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         if len(lines) == 1:
                             rec, ap = [0], 0
                         else:
-                            rec, prec, ap = voc_eval(
+                            rec, prec, ap, aose_class = voc_eval(
                                 res_file_template,
                                 self._anno_file_template,
                                 self._image_set_path,
@@ -258,8 +263,10 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                             df_tp=self.df_tp,
                             df_save=SAVE_ALL_SCORES, unknown=False, pseudo_knowns=PSEUDO_LABEL_KNOWN,
                                 class_thresholds_fn=class_thresholds_fn, pseudo_box_fn=pseudo_box_fn,
-                                pseudo_score_fn=pseudo_score_fn, save_exemplars=save_exemplars, exemplar_image_ids=exemplar_image_ids
+                                pseudo_score_fn=pseudo_score_fn, save_exemplars=save_exemplars, exemplar_image_ids=exemplar_image_ids,
+                                aose=aose
                             )
+                            self.class_aose[cls_id] = aose_class
                         if cls_id != unknown_class_index:
                             aps[thresh].append(ap * 100)
                         if thresh == 50 and cls_id == unknown_class_index:
@@ -268,6 +275,8 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         map_prev = {iou: np.mean(x) for iou, x in aps.items()}
                         ret["bbox_prev"] = {"AP": np.mean(list(map_prev.values())),
                                             "AP50": map_prev[50]}
+                if aose:
+                    print("aose", sum(self.class_aose.values()))
                 if SAVE_ALL_SCORES:
                     self.df["classes"] = self.df_classes
                     self.df["probs"] = self.df_probs
@@ -693,7 +702,7 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
 
 def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_metric=False, df_classes=None,
              df_probs=None, df_tp=None, df_save=False, unknown=False, pseudo_knowns=False, class_thresholds_fn=None,
-             pseudo_box_fn=None, pseudo_score_fn=None, save_exemplars=False, exemplar_image_ids=None):
+             pseudo_box_fn=None, pseudo_score_fn=None, save_exemplars=False, exemplar_image_ids=None, aose=None):
     """rec, prec, ap = voc_eval(detpath,
                                 annopath,
                                 imagesetfile,
@@ -790,7 +799,7 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     # number of positive instances for the class
     npos = 0
     for imagename in imagenames:
-        if classname == "unknown":
+        if classname == "unknown" or aose:
             R = [obj for obj in recs[imagename] if obj["name"] in T4_CLASS_NAMES]
         else:
             R = [obj for obj in recs[imagename] if obj["name"] == classname]
@@ -841,6 +850,9 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
 
     class_exemplar_files = set()
 
+    # total unknown objects misclassfied as unknown
+    total_unknown_known = 0
+
     for d in range(nd):
         R = class_recs[image_ids[d]]
         bb = BB[d, :].astype(float)
@@ -876,6 +888,7 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
             if not R["difficult"][jmax]:
                 if not R["det"][jmax]:
                     tp[d] = 1.0
+                    total_unknown_known += 1
                     if df_save:
                         df_tp.append(True)
                         df_probs.append(sorted_conf[d])
@@ -959,4 +972,4 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
     ap = voc_ap(rec, prec, use_07_metric)
     # We just take the last index of the rec matrix
-    return rec, prec, ap
+    return rec, prec, ap, total_unknown_known
