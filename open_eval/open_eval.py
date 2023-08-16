@@ -96,7 +96,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         """
 
         unknown_class_index = 80
-        ONLY_PREDICT = False
+        ONLY_PREDICT = True
         PREVIOUS_KNOWN = 0
         NUM_CLASSES = PREVIOUS_KNOWN + 80
         UNKNOWN = True
@@ -117,18 +117,39 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         all_predictions = comm.gather(self._predictions, dst=0)
         # list containing dictionary of keys with classes and values predictions
         # each prediction contains [image id, score, xmin, ymin, xmax, ymax
+        import pandas as pd
+
         if ONLY_PREDICT:
-            image_prediction_hash = defaultdict(list)
+            ids = [];probs = [];xmin = [];ymin = [];xmax = [];ymax = []
+            classes = []
             for predictions_per_gpu in all_predictions:
                 for clsid, lines in predictions_per_gpu.items():
-                    for line in lines:
-                        line_split = line.split(" ")
-                        image_id = line_split[0]
-                        image_prediction_hash[image_id].append([clsid] + line_split[1:])
-            with open(predict_fn, 'wb') as handle:
-                print("saved predictions", predict_fn)
-                pickle.dump(image_prediction_hash, handle)
+                    for p in lines:
+                        ps = p.split(" ")
+                        ids.append(ps[0])
+                        probs.append(ps[1])
+                        xmin.append(ps[2])
+                        ymin.append(ps[3])
+                        xmax.append(ps[4])
+                        ymax.append(ps[5])    
+                        classes.append(80)
+            df = pd.DataFrame();df["ids"] = ids;df["probs"] = probs;df["xmin"] = xmin;df["ymin"] = ymin;df["xmax"] = xmax; df["ymax"] = ymax
+            df["class"] = classes
+            df["ids"] = df["ids"].astype('str')
+            df.to_csv("unknown_t1_predictions.csv")
             return
+        # if ONLY_PREDICT:
+        #     image_prediction_hash = defaultdict(list)
+        #     for predictions_per_gpu in all_predictions:
+        #         for clsid, lines in predictions_per_gpu.items():
+        #             for line in lines:
+        #                 line_split = line.split(" ")
+        #                 image_id = line_split[0]
+        #                 image_prediction_hash[image_id].append([clsid] + line_split[1:])
+        #     with open(predict_fn, 'wb') as handle:
+        #         print("saved predictions", predict_fn)
+        #         pickle.dump(image_prediction_hash, handle)
+        #     return
         # key: imageid, value: predictions
         # predictions: class, score, xmin, ymin, xmax, ymax
         general_predictions_hash = defaultdict(list)
