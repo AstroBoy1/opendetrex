@@ -31,15 +31,20 @@ VOC_CLASS_NAMES_COCOFIED = set([
 d3_t1_classes = set(["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow"])
 d3_t2_classes = set(["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
               "diningtable", "dog", "horse", "motorbike", "person"])
-d3_t3_classes = set(["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow"])
-
+d3_t3_classes = set(["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
+              "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa",
+              "train"])
+voc_coco = set([
+    "airplane",  "dining table", "motorcycle",
+    "potted plant", "couch"
+])
 
 def main():
-    out_dr = "pseudolabels/d3/t2/Annotations"
+    out_dr = "pseudolabels/d3/t3/Annotations"
     image_box_hash = defaultdict(list)
     image_class_hash = defaultdict(list)
-    for class_name in d3_t1_classes:
-        with open("pseudolabels/d3/t2/known/boxes_{}.pickle".format(class_name), "rb") as fp:
+    for class_name in d3_t3_classes:
+        with open("pseudolabels/d3/t3/known/boxes_{}.pickle".format(class_name), "rb") as fp:
             box_hash = pickle.load(fp)
             for k, v in box_hash.items():
                 image_box_hash[k].append(v[0])
@@ -70,7 +75,7 @@ def save_pseudo(image_id, pseudo_boxes, out_dr, class_names):
     #breakpoint()
     for object in root.iter('name'):
         #print(object.text)
-        if object.text in d3_t1_classes or object.text == "airplane":
+        if object.text in d3_t3_classes or object.text in voc_coco:
         #if object.text in d3_t1_classes or object.text in VOC_CLASS_NAMES_COCOFIED:
             object.text = "unknown"
     for box, class_name in zip(pseudo_boxes, class_names):

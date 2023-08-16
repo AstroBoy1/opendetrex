@@ -141,8 +141,8 @@ def fscore(thresh, df_view, num_positive=10000):
 
 def main():
     #fn = "t2_known_tpfp_scores.csv"
-    fn = "d3_t2_tpfp_scores.csv"
-    out_fn = "d3_t2_class_f1_thresholds.csv"
+    fn = "d3_t3_tpfp_scores.csv"
+    out_fn = "d3_t3_class_f1_thresholds.csv"
     split_name = "owod_t1_train"
 
     thresholds = [x / 10 for x in range(10)]

@@ -77,12 +77,12 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
         split (str): one of "train", "test", "val", "trainval"
         class_names: list or tuple of class names
     """
-    
+
     UNKNOWN = False
-    PREV_KNOWN = 10
-    EXEMPLAR = False
-    PSEUDO = True
-    NUM_CLASSES = PREV_KNOWN + 10
+    PREV_KNOWN = 15
+    EXEMPLAR = True
+    PSEUDO = False
+    NUM_CLASSES = PREV_KNOWN + 5
 
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:
         fileids = np.loadtxt(f, dtype=np.str)
@@ -91,11 +91,15 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     annotation_dirname = PathManager.get_local_path(os.path.join(dirname, "Annotations/"))
     dicts = []
     exemplar_set = set()
+    exemplar_fn = "exemplars/d3/t3/exemplars.pickle"
+
     if EXEMPLAR:
-        with open("../PROB/data/VOC2007/ImageSets/Main/owod_t4_ft.txt") as fp:
-            exemplar_files = fp.readlines()
-        for ef in exemplar_files:
-            exemplar_set.add(ef.rstrip())
+        with open(exemplar_fn, 'rb') as handle:
+            exemplar_set = pickle.load(handle)
+        # with open("../PROB/data/VOC2007/ImageSets/Main/owod_t4_ft.txt") as fp:
+        #     exemplar_files = fp.readlines()
+        # for ef in exemplar_files:
+        #     exemplar_set.add(ef.rstrip())
     pseudo_file_set = set()
     pfs_fn = "pseudo_files_set.pickle"
     pfs_fn = "pseudo_files_set_t2.pickle"

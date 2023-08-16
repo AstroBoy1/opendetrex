@@ -67,6 +67,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         self.df_probs = []
         self.df_tp = []
 
+
     def reset(self):
         self._predictions = defaultdict(list)  # class name -> list of prediction strings
 
@@ -101,44 +102,73 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         # For generating pseudo labels, PSEUDO_LABEL_KNOWN=True, SAVE_ALL_SCORES=False
 
         unknown_class_index = 80
-        ONLY_PREDICT = False
+        ONLY_PREDICT = True
+        predict_fn = "predictions/owdetr_test_sample_known.pickle"
         UNKNOWN = False
         SAVE_SCORES = False
 
         # For f1 pseudo calculation
         SAVE_ALL_SCORES = False
-        tpfp_fn = "d3_t2_tpfp_scores.csv"
-        class_thresholds_fn = "d3_t1_class_f1_thresholds.csv"
+        tpfp_fn = "d3_t3_tpfp_scores.csv"
+        class_thresholds_fn = "d3_t3_class_f1_thresholds.csv"
         PSEUDO_LABEL_KNOWN = False
-        pseudo_box_fn = "pseudolabels/d3/t2/known/boxes_"
-        pseudo_score_fn = "pseudolabels/d3/t2/known/scores_"
-        PREVIOUS_KNOWN = 10
-        NUM_CLASSES = PREVIOUS_KNOWN + 10
+        pseudo_box_fn = "pseudolabels/d3/t3/known/boxes_"
+        pseudo_score_fn = "pseudolabels/d3/t3/known/scores_"
+        PREVIOUS_KNOWN = 15
+        NUM_CLASSES = PREVIOUS_KNOWN + 5
+
+        # For dataset 3
+        save_exemplars = False
+        exemplar_image_ids = None
+        exemplar_fn = "exemplars/d3/t2/exemplars.pickle"
+        if save_exemplars:
+            exemplar_image_ids = set()
 
         UPPER_THRESH = 100
-        if SAVE_ALL_SCORES:
+        if SAVE_ALL_SCORES or save_exemplars:
             UPPER_THRESH = 55
         if PSEUDO_LABEL_KNOWN:
             UPPER_THRESH = 55
         SINGLE_BRANCH = False
         known_removal = False
-        predict_fn = "predictions/t1/known_dual_test.pickle"
 
         all_predictions = comm.gather(self._predictions, dst=0)
         # list containing dictionary of keys with classes and values predictions
         # each prediction contains [image id, score, xmin, ymin, xmax, ymax
+        
+        import pandas as pd
+
         if ONLY_PREDICT:
-            image_prediction_hash = defaultdict(list)
+            ids = [];probs = [];xmin = [];ymin = [];xmax = [];ymax = []
+            classes = []
             for predictions_per_gpu in all_predictions:
                 for clsid, lines in predictions_per_gpu.items():
-                    for line in lines:
-                        line_split = line.split(" ")
-                        image_id = line_split[0]
-                        image_prediction_hash[image_id].append([clsid] + line_split[1:])
-            with open(predict_fn, 'wb') as handle:
-                print("saved predictions", predict_fn)
-                pickle.dump(image_prediction_hash, handle)
+                    for p in lines:
+                        ps = p.split(" ")
+                        ids.append(ps[0])
+                        probs.append(ps[1])
+                        xmin.append(ps[2])
+                        ymin.append(ps[3])
+                        xmax.append(ps[4])
+                        ymax.append(ps[5])    
+                        classes.append(clsid)
+            df = pd.DataFrame();df["ids"] = ids;df["probs"] = probs;df["xmin"] = xmin;df["ymin"] = ymin;df["xmax"] = xmax; df["ymax"] = ymax
+            df["class"] = classes
+            df["ids"] = df["ids"].astype('str')
+            df.to_csv("known_t1_predictions.csv")
             return
+        # if ONLY_PREDICT:
+        #     image_prediction_hash = defaultdict(list)
+        #     for predictions_per_gpu in all_predictions:
+        #         for clsid, lines in predictions_per_gpu.items():
+        #             for line in lines:
+        #                 line_split = line.split(" ")
+        #                 image_id = line_split[0]
+        #                 image_prediction_hash[image_id].append([clsid] + line_split[1:])
+        #     with open(predict_fn, 'wb') as handle:
+        #         print("saved predictions", predict_fn)
+        #         pickle.dump(image_prediction_hash, handle)
+        #     return
         # key: imageid, value: predictions
         # predictions: class, score, xmin, ymin, xmax, ymax
         general_predictions_hash = defaultdict(list)
@@ -228,7 +258,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                             df_tp=self.df_tp,
                             df_save=SAVE_ALL_SCORES, unknown=False, pseudo_knowns=PSEUDO_LABEL_KNOWN,
                                 class_thresholds_fn=class_thresholds_fn, pseudo_box_fn=pseudo_box_fn,
-                                pseudo_score_fn=pseudo_score_fn
+                                pseudo_score_fn=pseudo_score_fn, save_exemplars=save_exemplars, exemplar_image_ids=exemplar_image_ids
                             )
                         if cls_id != unknown_class_index:
                             aps[thresh].append(ap * 100)
@@ -245,6 +275,11 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                     self.df.to_csv(tpfp_fn)
                     print("saved tpfp scores")
                     return
+                elif save_exemplars:
+                    print("length of exemplars", len(exemplar_image_ids))
+                    with open(exemplar_fn, 'wb') as handle:
+                        pickle.dump(exemplar_image_ids, handle)
+                    #exemplar_image_ids
                 map_current = np.mean(aps[50][PREVIOUS_KNOWN:NUM_CLASSES])
                 ret["bbox_current"] = {"AP50": map_current}
                 mAP = {iou: np.mean(x) for iou, x in aps.items()}
@@ -658,7 +693,7 @@ def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_m
 
 def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_metric=False, df_classes=None,
              df_probs=None, df_tp=None, df_save=False, unknown=False, pseudo_knowns=False, class_thresholds_fn=None,
-             pseudo_box_fn=None, pseudo_score_fn=None):
+             pseudo_box_fn=None, pseudo_score_fn=None, save_exemplars=False, exemplar_image_ids=None):
     """rec, prec, ap = voc_eval(detpath,
                                 annopath,
                                 imagesetfile,
@@ -804,6 +839,8 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     class_thresholds_df = pd.read_csv(class_thresholds_fn)
     class_threshold = class_thresholds_df.loc[class_thresholds_df["class"] == classname]["threshold"].values
 
+    class_exemplar_files = set()
+
     for d in range(nd):
         R = class_recs[image_ids[d]]
         bb = BB[d, :].astype(float)
@@ -859,11 +896,44 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
                 df_probs.append(sorted_conf[d])
                 df_classes.append(classname)
             fp[d] = 1.0
+        if save_exemplars:
+            # Only save correct predictions, as these are more easily learned
+            if tp[d] == 1.0:
+                image_id_boxes[image_ids[d]].append(bb)
+                image_id_scores[image_ids[d]].append(sorted_conf[d])
         if PSEUDO_KNOWNS:
-            class_threshold = 0.1
+            #class_threshold = 0.1
             if sorted_conf[d] >= class_threshold:
                 image_id_boxes[image_ids[d]].append(bb)
                 image_id_scores[image_ids[d]].append(sorted_conf[d])
+    if save_exemplars:
+        image_ids_nms_boxes = {}
+        image_ids_nms_scores = {}
+        for key in image_id_boxes.keys():
+            bounding_boxes = image_id_boxes[key]
+            confidence_score = np.array(image_id_scores[key])
+            picked_boxes, picked_score = nms(bounding_boxes, confidence_score, threshold=ovthresh)
+            image_ids_nms_boxes[key] = picked_boxes
+            image_ids_nms_scores[key] = picked_score
+        # Output the top/bottom 25 image files
+        #breakpoint()
+        # Add hard classification examples
+        #print("adding hard examples")
+        for k, v in sorted(image_ids_nms_scores.items(), key=lambda item: item[1]):
+            if len(class_exemplar_files) < 25:
+                #print(k)
+                class_exemplar_files.add(k)
+            else:
+                break
+        # Add easy classification examples
+        #print("adding easy examples")
+        for k, v in sorted(image_ids_nms_scores.items(), key=lambda item: item[1] * -1):
+            if len(class_exemplar_files) < 50:
+                #print(k)
+                class_exemplar_files.add(k)
+            else:
+                break
+        exemplar_image_ids.update(class_exemplar_files)
     if PSEUDO_KNOWNS:
         image_ids_nms_boxes = {}
         image_ids_nms_scores = {}
