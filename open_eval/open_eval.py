@@ -101,10 +101,9 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         # SAVE_ALL_SCORES = True, PSEUDO_LABEL_KNOWN = False, tpfp_fn
 
         # For generating pseudo labels, PSEUDO_LABEL_KNOWN=True, SAVE_ALL_SCORES=False
-        return
         unknown_class_index = 80
-        ONLY_PREDICT = False
-        predict_fn = "predictions/owdetr_test_sample_known.pickle"
+        ONLY_PREDICT = True
+        predict_fn = "predictions/t2_owod_test_sample_known.pickle"
         UNKNOWN = False
         SAVE_SCORES = False
 
@@ -115,8 +114,8 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         PSEUDO_LABEL_KNOWN = False
         pseudo_box_fn = "pseudolabels/d3/t3/known/boxes_"
         pseudo_score_fn = "pseudolabels/d3/t3/known/scores_"
-        PREVIOUS_KNOWN = 0
-        NUM_CLASSES = PREVIOUS_KNOWN + 20
+        PREVIOUS_KNOWN = 20
+        NUM_CLASSES = PREVIOUS_KNOWN + 40
 
         # For dataset 3
         save_exemplars = False
@@ -160,7 +159,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
             df = pd.DataFrame();df["ids"] = ids;df["probs"] = probs;df["xmin"] = xmin;df["ymin"] = ymin;df["xmax"] = xmax; df["ymax"] = ymax
             df["class"] = classes
             df["ids"] = df["ids"].astype('str')
-            df.to_csv("known_t1_predictions.csv")
+            df.to_csv("known_t2_predictions.csv")
             return
         # if ONLY_PREDICT:
         #     image_prediction_hash = defaultdict(list)
