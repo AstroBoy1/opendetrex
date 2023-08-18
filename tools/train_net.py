@@ -106,7 +106,7 @@ class Trainer(SimpleTrainer):
                     self.run_step()
                     #end.record()
                     #torch.cuda.synchronize()
-                    print("batch time", start.elapsed_time(end))
+                    #print("batch time", start.elapsed_time(end))
                     self.after_step()
                 # self.iter == max_iter can be used by `after_train` to
                 # tell whether the training successfully finished or failed
@@ -137,6 +137,7 @@ class Trainer(SimpleTrainer):
         """
         If you want to do something with the losses, you can wrap the model.
         """
+        #breakpoint()
         with autocast(enabled=self.amp):
             loss_dict = self.model(data)
             if isinstance(loss_dict, torch.Tensor):

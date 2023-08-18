@@ -191,6 +191,7 @@ class DINO(nn.Module):
         # Adaptive Edge Net
         # Currently edge params are shared across channels and summed
         # Edges X Direction
+        #breakpoint()
         if EDGES:
             kernel_x = torch.cat((self.weights_x, self.zero_vector, -self.weights_x), 1)
             kernel_x = kernel_x.view(1, 1, 3, 3).repeat(1, 3, 1, 1).to(self.device)
