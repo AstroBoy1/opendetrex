@@ -79,10 +79,10 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     """
 
     UNKNOWN = False
-    PREV_KNOWN = 15
+    PREV_KNOWN = 19
     EXEMPLAR = False
     PSEUDO = False
-    NUM_CLASSES = PREV_KNOWN + 5
+    NUM_CLASSES = PREV_KNOWN + 1
 
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:
         fileids = np.loadtxt(f, dtype=np.str)

@@ -114,8 +114,8 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         PSEUDO_LABEL_KNOWN = False
         pseudo_box_fn = "pseudolabels/d3/t3/known/boxes_"
         pseudo_score_fn = "pseudolabels/d3/t3/known/scores_"
-        PREVIOUS_KNOWN = 15
-        NUM_CLASSES = PREVIOUS_KNOWN +5
+        PREVIOUS_KNOWN = 19
+        NUM_CLASSES = PREVIOUS_KNOWN + 1
 
         # For dataset 3
         save_exemplars = False
