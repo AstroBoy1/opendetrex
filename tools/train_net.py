@@ -99,13 +99,13 @@ class Trainer(SimpleTrainer):
                 self.before_train()
                 for self.iter in range(start_iter, max_iter):
                     self.before_step()
-                    start = torch.cuda.Event(enable_timing=True)
-                    end = torch.cuda.Event(enable_timing=True)
-                    start.record()
+                    #start = torch.cuda.Event(enable_timing=True)
+                    #end = torch.cuda.Event(enable_timing=True)
+                    #start.record()
                     self.run_step()
-                    end.record()
-                    torch.cuda.synchronize()
-                    print("step time", start.elapsed_time(end))
+                    #end.record()
+                    #torch.cuda.synchronize()
+                    #print("step time", start.elapsed_time(end))
                     self.after_step()
                 # self.iter == max_iter can be used by `after_train` to
                 # tell whether the training successfully finished or failed

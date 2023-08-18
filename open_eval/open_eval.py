@@ -97,8 +97,8 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
 
         unknown_class_index = 80
         ONLY_PREDICT = True
-        PREVIOUS_KNOWN = 0
-        NUM_CLASSES = PREVIOUS_KNOWN + 80
+        PREVIOUS_KNOWN = 40
+        NUM_CLASSES = PREVIOUS_KNOWN + 20
         UNKNOWN = True
         SAVE_SCORES = False
         # For f1 pseudo calculation

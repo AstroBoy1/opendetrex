@@ -912,7 +912,7 @@ class DINO(nn.Module):
             #     if param.requires_grad and name == "weights_y":
             #         print(name, param.data, param.grad)
             it = torch.concat((it[:, [0, 1, 2]], edge_mag), 1)
-
+        #breakpoint()
         # DINO DETR
         if self.training:
             batch_size, num_channels, H, W = it.shape
