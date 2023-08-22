@@ -1,0 +1,14 @@
+dino_tp_class_scores.csv contains the original dino output trained on t1
+open_eval.py overwrites the csv
+tools/train_net.py contains the training logic
+projects/dino/modeling/dino.py contains the code for the transformer model including adaptive edges and NMS inference
+infer.sh is a sample script for evaluation or inference of a model
+pascal_voc_coco.py loads the annotations for training
+configs/common/data/ood.py specifies which directories to use for loading training and test data
+train.sh is a sample training script
+projects/dino/configs/r50_4scale_unknown_adaptive_edges.py contains model parameters that can be edited
+open_eval/open_eval.py contains the evaluation logic
+
+pseudolabel/pseudo_label.py contains the code to make new pseudo label annotations
+pseudo_label/t1_tpfp_scores.py contains the code to generate the thresholds used for choosing pseudo labels and is run before pseudo_label.py
+open_eval/open_eval.py is run first to generate predictions for pseudo_label/t1_tpfp_scores.py

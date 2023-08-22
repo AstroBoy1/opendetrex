@@ -25,7 +25,8 @@ BASE_VOC_CLASS_NAMES = [
 ]
 
 
-def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], Tuple[str, ...]]):
+def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], Tuple[str, ...]], unknown=True, prev_known=0, exemplar=False, pseudo=False,
+                       exemplar_fn=None, pseudo_fn=None, class_examples=50):
     """
     Load Pascal VOC detection annotations to Detectron2 format.
 
@@ -34,12 +35,8 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
         split (str): one of "train", "test", "val", "trainval"
         class_names: list or tuple of class names
     """
-    
-    UNKNOWN = True
-    PREV_KNOWN = 0
-    EXEMPLAR = False
-    PSEUDO = False
-    NUM_CLASSES = PREV_KNOWN + 20
+
+    num_classes = prev_known + 20
 
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:
         fileids = np.loadtxt(f, dtype=np.str)
@@ -48,14 +45,14 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     annotation_dirname = PathManager.get_local_path(os.path.join(dirname, "Annotations/"))
     dicts = []
     exemplar_set = set()
-    if EXEMPLAR:
-        with open("../PROB/data/VOC2007/ImageSets/Main/owod_t3_ft.txt") as fp:
+    if exemplar:
+        with open(exemplar_fn) as fp:
             exemplar_files = fp.readlines()
         for ef in exemplar_files:
             exemplar_set.add(ef.rstrip())
     pseudo_file_set = set()
-    if PSEUDO:
-        with open("pseudo_files_set.pickle", "rb") as fp:
+    if pseudo:
+        with open(pseudo_fn, "rb") as fp:
             pseudo_file_set = pickle.load(fp)
     exemplar_class_counts = defaultdict(int)
     for fileid in fileids:
@@ -94,30 +91,26 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
             bbox[1] -= 1.0
             cid = class_names.index(cls)
             # 1 for unknown
-            if UNKNOWN:
-                if NUM_CLASSES > cid >= PREV_KNOWN:
+            if unknown:
+                if num_classes > cid >= prev_known:
                     instances.append(
                         {"category_id": 0, "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
                     )
             else:
-                if cid < NUM_CLASSES:
-                    if cid >= PREV_KNOWN or (cid < PREV_KNOWN and fileid in pseudo_file_set):
+                if cid < num_classes:
+                    if cid >= prev_known or (cid < prev_known and fileid in pseudo_file_set):
                         instances.append(
                             {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
                         )
-                    elif EXEMPLAR:
-                        if cid < PREV_KNOWN and fileid in exemplar_set:
-                            # exemplar_class_counts[cid] += 1
-                            # if exemplar_class_counts[cid] <= 50:
-                            #     #print("hit max for class", cid)
-                            #     instances.append(
-                            #         {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
-                            #     )
-                            # else:
-                            #     continue
-                            instances.append(
-                                {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
-                            )
+                    elif exemplar:
+                        if cid < prev_known and fileid in exemplar_set:
+                            exemplar_class_counts[cid] += 1
+                            if exemplar_class_counts[cid] <= class_examples:
+                                instances.append(
+                                    {"category_id": class_names.index(cls), "bbox": bbox, "bbox_mode": BoxMode.XYXY_ABS}
+                                )
+                            else:
+                                continue
         r["annotations"] = instances
         dicts.append(r)
         # returns filename which is the full filepath, image_id which is just a string,
@@ -125,8 +118,8 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     return dicts
 
 
-def register_pascal_voc(name, dirname, split, year, class_names):
-    DatasetCatalog.register(name, lambda: load_voc_instances(dirname, split, class_names))
+def register_pascal_voc(name, dirname, split, year, class_names, unknown=True, prev_known=0, exemplar=False, pseudo=False):
+    DatasetCatalog.register(name, lambda: load_voc_instances(dirname, split, class_names, unknown, prev_known, exemplar, pseudo))
     MetadataCatalog.get(name).set(
         thing_classes=list(class_names), dirname=dirname, year=year, split=split
     )
