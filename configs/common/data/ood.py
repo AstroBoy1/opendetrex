@@ -108,16 +108,29 @@ register_pascal_voc("towod_test", dir, "test", 2007, ALL_CLASSES)
 register_pascal_voc("towod_test_sample", dir, "owod_test_sample", 2007, ALL_CLASSES)
 
 register_pascal_voc("owdetr_t1", dir, "owdetr_t1_train", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
+register_pascal_voc("owdetr_t1_sample", dir, "owdetr_t1_train_sample", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
+register_pascal_voc("owdetr_t2_exemplars", dir, "owdetr_t2_train_andexemplars", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
+register_pascal_voc("owdetr_t3_exemplars", dir, "owdetr_t3_train_andexemplars", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
 register_pascal_voc("owdetr_t2", dir, "owdetr_t2_train", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
-register_pascal_voc("owdetr_t2_exemplar", dir, "owdetr_t2_train_andexemplars", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
-
 register_pascal_voc("owdetr_t3", dir, "owdetr_t3_train", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
 register_pascal_voc("owdetr_t4", dir, "owdetr_t4_train", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
-register_pascal_voc("owdetr_test", dir, "owdetr_test", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
+register_pascal_voc("owdetr_t4_exemplars", dir, "owdetr_t4_train_andexemplars", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
+
+register_pascal_voc("owdetr_test", "../PROB/data/VOC2007", "owdetr_test", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
+register_pascal_voc("owdetr_test_sample", "../PROB/data/VOC2007", "owdetr_test_sample", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
+
+#register_pascal_voc("owdetr_test", dir, "owdetr_test", 2007, VOC_COCO_CLASS_NAMES["OWDETR"])
+
+register_pascal_voc("d3_test", dir, "d3_test", 2007, ALL_CLASSES)
+
+pseudo_dir = "pseudolabels/d3/t2"
+register_pascal_voc("d3_t1_incremental", "pseudolabels/d3/t1", "owod_t1_train", 2007, ALL_CLASSES)
+register_pascal_voc("d3_t2_incremental", pseudo_dir, "owod_t1_train", 2007, ALL_CLASSES)
+register_pascal_voc("d3_t3_incremental", "pseudolabels/d3/t3", "owod_t1_train", 2007, ALL_CLASSES)
 
 # Augmentations to apply to the training data
 dataloader.train = L(build_detection_train_loader)(
-    dataset=L(get_detection_dataset_dicts)(names="towod_t3"),
+    dataset=L(get_detection_dataset_dicts)(names="towod_t1"),
     mapper=L(DetrDatasetMapper)(
         augmentation=[
             L(T.RandomFlip)(),
@@ -164,6 +177,41 @@ dataloader.train = L(build_detection_train_loader)(
             L(T.RandomLighting)(
                 scale=0.1
             ),
+        ],
+        
+        is_train=True,
+        mask_on=False,
+        img_format="RGB",
+    ),
+    total_batch_size=16,
+    num_workers=4,
+)
+
+# Augmentations to apply to the training data
+dataloader.train_known = L(build_detection_train_loader)(
+    dataset=L(get_detection_dataset_dicts)(names="towod_t2"),
+    mapper=L(DetrDatasetMapper)(
+        augmentation=[
+            L(T.RandomFlip)(),
+            L(T.ResizeShortestEdge)(
+                short_edge_length=(480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800),
+                max_size=1333,
+                sample_style="choice"),
+        ],
+        augmentation_with_crop=[
+            L(T.RandomFlip)(),
+            L(T.ResizeShortestEdge)(
+                short_edge_length=(400, 500, 600),
+                sample_style="choice",
+            ),
+            L(T.RandomCrop)(
+                crop_type="absolute_range",
+                crop_size=(384, 600),
+            ),
+            L(T.ResizeShortestEdge)(
+                short_edge_length=(480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800),
+                max_size=1333,
+                sample_style="choice"),
         ],
         
         is_train=True,
