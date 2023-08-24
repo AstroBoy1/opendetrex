@@ -175,7 +175,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         predictions = defaultdict(list)
         for predictions_per_rank in all_predictions:
             for clsid, lines in predictions_per_rank.items():
-                breakpoint()
+                #breakpoint()
                 if self.single_branch:
                     # Always predict unknown for single branch
                     predictions[0].extend(lines)
@@ -233,7 +233,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                 #    start_index = self.previous_known
                 for cls_id, cls_name in enumerate(self._class_names[start_index:self.num_classes]):
                     print("cls_id", cls_id)
-                    breakpoint()
+                    #breakpoint()
                     lines = predictions.get(cls_id, [""])
                     with open(res_file_template.format(cls_name), "w") as f:
                         f.write("\n".join(lines))

@@ -621,32 +621,32 @@ class DINO(nn.Module):
         # box_cls.shape: 1, 300, 80
         # box_pred.shape: 1, 300, 4
         prob = box_cls.sigmoid()
-        prob_scores = [x[0] for x in prob[0]]
-        boxes = box_pred[0]
+        if self.edges:
+            prob_scores = [x[0] for x in prob[0]]
+            boxes = box_pred[0]
         # if len(picked_boxes > self.select_box_nums_for_evaluation):
             # break
-
-        picked_boxes, picked_scores = None, None
-        for thresh in range(1, 10):
-            picked_boxes, picked_scores = self.nms(boxes, prob_scores, 1 - thresh / 10)
-            if len(picked_boxes) <= self.select_box_nums_for_evaluation:
-                break
-
-        # topk_values, topk_indexes = torch.topk(
-        #     prob.view(box_cls.shape[0], -1), self.select_box_nums_for_evaluation, dim=1
-        # )
-        # # highest probability score for each query detection, 300
-        # scores = topk_values
-        # topk_boxes = torch.div(topk_indexes, box_cls.shape[2], rounding_mode="floor")
-        # labels = topk_indexes % box_cls.shape[2]
         
-        # boxes = torch.gather(box_pred, 1, topk_boxes.unsqueeze(-1).repeat(1, 1, 4))
-
-        scores = torch.tensor(picked_scores, device=self.device).clone().detach()
-        scores = scores.reshape((1, len(picked_boxes)))
-        labels = torch.zeros((1, len(picked_scores)), device=self.device)
-        boxes = torch.stack(picked_boxes).reshape((1, len(picked_boxes), 4))
-        boxes = boxes.clone().detach()
+        if self.edges:
+            picked_boxes, picked_scores = None, None
+            for thresh in range(1, 10):
+                picked_boxes, picked_scores = self.nms(boxes, prob_scores, 1 - thresh / 10)
+                if len(picked_boxes) <= self.select_box_nums_for_evaluation:
+                    break
+            scores = torch.tensor(picked_scores, device=self.device).clone().detach()
+            scores = scores.reshape((1, len(picked_boxes)))
+            labels = torch.zeros((1, len(picked_scores)), device=self.device)
+            boxes = torch.stack(picked_boxes).reshape((1, len(picked_boxes), 4))
+            boxes = boxes.clone().detach()
+        else:
+            topk_values, topk_indexes = torch.topk(
+            prob.view(box_cls.shape[0], -1), self.select_box_nums_for_evaluation, dim=1
+        )
+            # highest probability score for each query detection, 300
+            scores = topk_values
+            topk_boxes = torch.div(topk_indexes, box_cls.shape[2], rounding_mode="floor")
+            labels = topk_indexes % box_cls.shape[2]
+            boxes = torch.gather(box_pred, 1, topk_boxes.unsqueeze(-1).repeat(1, 1, 4))
 
         # For each box we assign the best class or the second best if the best on is `no_object`.
         # scores, labels = F.softmax(box_cls, dim=-1)[:, :, :-1].max(-1)
