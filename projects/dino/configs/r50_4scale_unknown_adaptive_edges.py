@@ -52,7 +52,7 @@ model.device = train.device
 
 # known and unknown class
 model.num_classes = 2
-model.select_box_nums_for_evaluation = 100
+model.select_box_nums_for_evaluation = 50
 
 # Frequency channel
 model.backbone.stem.in_channels = 4
@@ -175,9 +175,6 @@ dataloader.evaluator.upper_thresh=100
 dataloader.evaluator.pseudo_label_known=False
 dataloader.evaluator.single_branch=True
 dataloader.evaluator.known_removal=False
-#dataloader.predict_fn = "predictions/t1/known_dual_test.pickle"
-#dataloader.tpfp_fn = "t2_known_tpfp_scores.csv"
 #dataloader.unknown_predict_fn=""
 dataloader.evaluator.num_classes = 20
-#dataloader.pseudo_label_fn="pseudolabels/t2/known_50_2/"
 dataloader.evaluator.all_classes = towod_classes

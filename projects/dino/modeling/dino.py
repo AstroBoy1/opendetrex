@@ -624,9 +624,6 @@ class DINO(nn.Module):
         if self.edges:
             prob_scores = [x[0] for x in prob[0]]
             boxes = box_pred[0]
-        # if len(picked_boxes > self.select_box_nums_for_evaluation):
-            # break
-        
         if self.edges:
             picked_boxes, picked_scores = None, None
             for thresh in range(1, 10):
