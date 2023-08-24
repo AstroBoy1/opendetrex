@@ -844,8 +844,8 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     class_scores = []
 
     #class_thresholds_fn = "d3_t1_class_f1_thresholds.csv"
-    class_thresholds_df = pd.read_csv(class_thresholds_fn)
-    class_threshold = class_thresholds_df.loc[class_thresholds_df["class"] == classname]["threshold"].values
+    #class_thresholds_df = pd.read_csv(class_thresholds_fn)
+    #class_threshold = class_thresholds_df.loc[class_thresholds_df["class"] == classname]["threshold"].values
 
     class_exemplar_files = set()
 
