@@ -105,7 +105,7 @@ model.device = train.device
 # 80 default classes for owod
 model.num_classes = 80
 model.select_box_nums_for_evaluation = 50
-model.num_queries = 100
+model.num_queries = 50
 
 # modify optimizer config
 optimizer.lr = 1e-5
@@ -184,15 +184,16 @@ towod_classes = tuple(itertools.chain(VOC_CLASS_NAMES, T2_CLASS_NAMES, T3_CLASS_
 owdetr_classes = tuple(itertools.chain(OWDETR_T1_CLASS_NAMES, OWDETR_T2_CLASS_NAMES, OWDETR_T3_CLASS_NAMES, OWDETR_T4_CLASS_NAMES, UNK_CLASS))
 
 dir = "../PROB/data/VOC2007"
-register_pascal_voc("towod_t1", dir, "owod_t1_train", 2007, towod_classes, unknown=True, prev_known=0, exemplar=False, pseudo=False)
-register_pascal_voc("towod_test_sample", dir, "owod_test_sample", 2007, towod_classes, unknown=True, prev_known=0, exemplar=False, pseudo=False)
+register_pascal_voc("towod_t1", dir, "owod_t1_train", 2007, towod_classes, unknown=False, prev_known=0, exemplar=False, pseudo=False)
+register_pascal_voc("towod_test", dir, "test", 2007, towod_classes, unknown=False, prev_known=0, exemplar=False, pseudo=False)
+register_pascal_voc("towod_test_sample", dir, "owod_test_sample", 2007, towod_classes, unknown=False, prev_known=0, exemplar=False, pseudo=False)
 
 # dump the testing results into output_dir for visualization
 dataloader.evaluator.output_dir = train.output_dir
 
 # Specify what directories to train and test on
 #dataloader.train.dataset.names = "towod_t2"
-dataloader.test.dataset.names = "towod_t1"
+dataloader.test.dataset.names = "towod_test_sample"
 dataloader.train = dataloader.train_known
 
 # modify dataloader config

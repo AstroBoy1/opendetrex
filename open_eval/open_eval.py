@@ -175,6 +175,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         predictions = defaultdict(list)
         for predictions_per_rank in all_predictions:
             for clsid, lines in predictions_per_rank.items():
+                breakpoint()
                 if self.single_branch:
                     # Always predict unknown for single branch
                     predictions[0].extend(lines)
@@ -207,7 +208,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                     with open(res_file_template.format(cls_name), "w") as f:
                         f.write("\n".join(lines))
                     for thresh in range(50, 55, 5):
-                        rec, prec, ap = owod_eval(
+                        rec, prec, ap = general_eval(
                             res_file_template,
                             self._anno_file_template,
                             self._image_set_path,
@@ -231,6 +232,8 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                 #if self.save_all_scores:
                 #    start_index = self.previous_known
                 for cls_id, cls_name in enumerate(self._class_names[start_index:self.num_classes]):
+                    print("cls_id", cls_id)
+                    breakpoint()
                     lines = predictions.get(cls_id, [""])
                     with open(res_file_template.format(cls_name), "w") as f:
                         f.write("\n".join(lines))
@@ -265,6 +268,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
                         self.df.to_csv(self.tpfp_fn)
                         print("saved tpfp scores")
                         return
+                    print("ap50", aps[50][cls_id])
                 map_current = np.mean(aps[50][self.previous_known:self.num_classes])
                 ret["bbox_current"] = {"AP50": map_current}
                 mAP = {iou: np.mean(x) for iou, x in aps.items()}
@@ -443,7 +447,7 @@ def iou(BBGT, bb):
     return ovmax, jmax
 
 
-def owod_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_metric=False, gph=None, known_removal=False, known_pred_fn="predictions/t1/known_dual_test.pickle",
+def general_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_metric=False, gph=None, known_removal=False, known_pred_fn="predictions/t1/known_dual_test.pickle",
               unknown_classes = []):
     """rec, prec, ap = voc_eval(detpath,
                                 annopath,
