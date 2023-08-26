@@ -187,6 +187,7 @@ dir = "../PROB/data/VOC2007"
 register_pascal_voc("towod_t1", dir, "owod_t1_train", 2007, towod_classes, unknown=False, prev_known=0, exemplar=False, pseudo=False)
 register_pascal_voc("towod_test", dir, "test", 2007, towod_classes, unknown=False, prev_known=0, exemplar=False, pseudo=False)
 register_pascal_voc("towod_test_sample", dir, "owod_test_sample", 2007, towod_classes, unknown=False, prev_known=0, exemplar=False, pseudo=False)
+register_pascal_voc("towod_test_pseudo", dir, "owod_test_sample", 2007, towod_classes, unknown=False, prev_known=0, pseudo=True, pseudo_fn=None)
 
 # dump the testing results into output_dir for visualization
 dataloader.evaluator.output_dir = train.output_dir

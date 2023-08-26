@@ -118,8 +118,8 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     return dicts
 
 
-def register_pascal_voc(name, dirname, split, year, class_names, unknown=True, prev_known=0, exemplar=False, pseudo=False):
-    DatasetCatalog.register(name, lambda: load_voc_instances(dirname, split, class_names, unknown, prev_known, exemplar, pseudo))
+def register_pascal_voc(name, dirname, split, year, class_names, unknown=True, prev_known=0, exemplar=False, pseudo=False, exemplar_fn=None, pseudo_fn=None):
+    DatasetCatalog.register(name, lambda: load_voc_instances(dirname, split, class_names, unknown, prev_known, exemplar, pseudo, exemplar_fn, pseudo_fn))
     MetadataCatalog.get(name).set(
         thing_classes=list(class_names), dirname=dirname, year=year, split=split
     )

@@ -56,6 +56,7 @@ class DINO(nn.Module):
         aux_loss (bool): Whether to calculate auxiliary loss in criterion. Default: True.
         select_box_nums_for_evaluation (int): the number of topk candidates
             slected at postprocess for evaluation. Default: 300.
+        edges: true if using general objects channel
         device (str): Training device. Default: "cuda".
     """
 
@@ -625,6 +626,7 @@ class DINO(nn.Module):
             prob_scores = [x[0] for x in prob[0]]
             boxes = box_pred[0]
         if self.edges:
+            # NMS to get the prediction number down, not needed if not benchmarking
             picked_boxes, picked_scores = None, None
             for thresh in range(1, 10):
                 picked_boxes, picked_scores = self.nms(boxes, prob_scores, 1 - thresh / 10)
